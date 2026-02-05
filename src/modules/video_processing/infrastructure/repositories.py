@@ -2,8 +2,9 @@ from typing import List, Optional
 from uuid import UUID
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.modules.video_processing.domain.entities import VideoJob, JobStatus, Transcript, RenderConfig
-from src.modules.video_processing.domain.repositories import IVideoRepository
+from src.modules.video_processing.domain.entities import VideoJob
+from src.modules.video_processing.domain.value_objects import JobStatus, Transcript, RenderConfig
+from src.modules.video_processing.domain.ports import IVideoRepository
 from .models import VideoJobModel
 
 class PostgresVideoRepository(IVideoRepository):
@@ -11,9 +12,7 @@ class PostgresVideoRepository(IVideoRepository):
         self.session = session
 
     async def save(self, job: VideoJob) -> None:
-        # Convert domain entity to SQLAlchemy model
         model_data = job.dict()
-        # Handle transcript conversion if it's a Pydantic model
         if job.transcript:
             model_data['transcript'] = job.transcript.dict()
         if job.render_config:

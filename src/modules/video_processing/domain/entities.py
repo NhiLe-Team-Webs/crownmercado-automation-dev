@@ -1,29 +1,8 @@
 from datetime import datetime
-from enum import Enum
 from typing import List, Optional
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
-
-class JobStatus(str, Enum):
-    UPLOADED = "Uploaded"
-    QUEUED = "Queued"
-    PROCESSING = "Processing"
-    COMPLETED = "Completed"
-    FAILED = "Failed"
-
-class WordSegment(BaseModel):
-    word: str
-    start: float
-    end: float
-    confidence: float
-
-class Transcript(BaseModel):
-    full_text: str
-    words: List[WordSegment] = []
-    
-class RenderConfig(BaseModel):
-    resolution: str = "1920x1080"
-    format: str = "mp4"
+from .value_objects import JobStatus, Transcript, RenderConfig
 
 class VideoJob(BaseModel):
     id: UUID = Field(default_factory=uuid4)

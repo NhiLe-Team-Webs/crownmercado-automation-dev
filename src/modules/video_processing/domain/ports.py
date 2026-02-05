@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from uuid import UUID
 from .entities import VideoJob
+from .value_objects import Transcript
 
 class IVideoRepository(ABC):
     @abstractmethod
@@ -22,4 +23,15 @@ class IVideoRepository(ABC):
 
     @abstractmethod
     async def find_by_status(self, status: str) -> List[VideoJob]:
+        pass
+
+class ITranscriptionPort(ABC):
+    @abstractmethod
+    async def transcribe(self, audio_path: str) -> Transcript:
+        pass
+
+class IRenderEnginePort(ABC):
+    @abstractmethod
+    async def render(self, job_id: UUID, layers: list) -> str:
+        """Trả về output file path"""
         pass

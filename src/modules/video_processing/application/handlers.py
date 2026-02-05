@@ -1,7 +1,7 @@
 from uuid import UUID
 from typing import Optional
-from .entities import VideoJob, JobStatus
-from .repositories import IVideoRepository
+from src.modules.video_processing.domain.entities import VideoJob
+from src.modules.video_processing.domain.ports import IVideoRepository
 
 class ProcessVideoJobUseCase:
     def __init__(self, video_repo: IVideoRepository):
@@ -13,7 +13,11 @@ class ProcessVideoJobUseCase:
             return None
         
         # Placeholder for complex pipeline logic
-        # silence detection -> ASR -> JSON -> B-roll -> text -> render
+        # orchestration steps (Phase 1.1):
+        # 1. Silence removal
+        # 2. ASR
+        # 3. B-roll generation
+        # 4. Render
         
         job.mark_as_processing()
         await self.video_repo.save(job)

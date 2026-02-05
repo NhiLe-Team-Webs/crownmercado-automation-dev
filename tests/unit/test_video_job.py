@@ -1,6 +1,7 @@
 import pytest
 from uuid import uuid4
-from src.modules.video_processing.domain.entities import VideoJob, JobStatus, Transcript
+from src.modules.video_processing.domain.entities import VideoJob
+from src.modules.video_processing.domain.value_objects import JobStatus, Transcript
 
 def test_video_job_creation():
     user_id = 1

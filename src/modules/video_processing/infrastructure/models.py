@@ -1,7 +1,7 @@
 from sqlalchemy import Column, String, Integer, JSON, DateTime, Enum as SQLEnum, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID as PostgresUUID, ARRAY
 from src.shared.database.base import Base
-from src.modules.video_processing.domain.entities import JobStatus
+from src.modules.video_processing.domain.value_objects import JobStatus
 import uuid
 
 class VideoJobModel(Base):

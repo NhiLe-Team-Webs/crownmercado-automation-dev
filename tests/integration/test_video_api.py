@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient
-from src.api.main import app
-from src.modules.video_processing.domain.entities import JobStatus
+from src.modules.video_processing.domain.entities import VideoJob
+from src.modules.video_processing.domain.value_objects import JobStatus
 
 @pytest.mark.asyncio
 async def test_health_check():
