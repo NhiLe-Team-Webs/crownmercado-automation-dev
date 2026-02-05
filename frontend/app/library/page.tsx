@@ -3,8 +3,9 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import VideoCard from '@/components/VideoCard';
-import { LayoutDashboard, Library as LibraryIcon, Settings, LogOut, Search, Filter, Loader2 } from 'lucide-react';
+import VideoRow from '@/components/VideoRow';
+import Shell from '@/components/Shell';
+import { FileVideo, Loader2, Info } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LibraryPage() {
@@ -14,122 +15,76 @@ export default function LibraryPage() {
     });
 
     return (
-        <div className="flex min-h-screen bg-background font-sans">
-            {/* Sidebar */}
-            <aside className="w-64 border-r border-white/5 bg-surface flex flex-col shrink-0">
-                <div className="p-6">
-                    <Link href="/" className="flex items-center gap-2 group">
-                        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <div className="w-4 h-4 bg-white rounded-sm" />
-                        </div>
-                        <span className="text-lg font-bold text-white tracking-tight">Studio</span>
-                    </Link>
-                </div>
-
-                <nav className="flex-1 px-4 space-y-1">
-                    <Link href="/upload" className="flex items-center gap-3 px-3 py-2 rounded-lg text-text-secondary hover:bg-white/5 hover:text-white transition-colors">
-                        <LayoutDashboard className="w-5 h-5" />
-                        Dashboard
-                    </Link>
-                    <Link href="/library" className="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-medium transition-colors">
-                        <LibraryIcon className="w-5 h-5" />
-                        Content
-                    </Link>
-                    <Link href="/settings" className="flex items-center gap-3 px-3 py-2 rounded-lg text-text-secondary hover:bg-white/5 hover:text-white transition-colors">
-                        <Settings className="w-5 h-5" />
-                        Settings
-                    </Link>
-                </nav>
-
-                <div className="p-4 border-t border-white/5">
-                    <button className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-error hover:bg-error/10 transition-colors">
-                        <LogOut className="w-5 h-5" />
-                        Sign out
-                    </button>
-                </div>
-            </aside>
-
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col overflow-hidden">
-                {/* Header */}
-                <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-background/50 backdrop-blur-md shrink-0">
-                    <div className="flex items-center gap-6">
-                        <h1 className="text-lg font-semibold text-white">Channel content</h1>
-                        {/* Tabs Style */}
-                        <div className="flex items-center gap-4 h-16 border-b-2 border-primary -mb-[1px]">
-                            <span className="text-sm font-medium text-primary">Videos</span>
-                        </div>
-                        <div className="flex items-center gap-4 h-16 border-b-2 border-transparent -mb-[1px]">
-                            <span className="text-sm font-medium text-text-secondary hover:text-white cursor-pointer transition-colors">Playlists</span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-4">
+        <Shell title="Video Archives">
+            <div className="p-8 max-w-7xl mx-auto">
+                {isLoading ? (
+                    <div className="h-[60vh] flex flex-col items-center justify-center gap-6">
                         <div className="relative">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" />
-                            <input
-                                type="text"
-                                placeholder="Search videos..."
-                                className="bg-white/5 border border-white/10 rounded-full py-1.5 pl-9 pr-4 text-xs text-white focus:outline-none focus:border-primary/50 w-64 transition-all"
-                            />
+                            <Loader2 className="w-16 h-16 text-primary animate-spin" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-2 h-2 rounded-full bg-primary animate-ping" />
+                            </div>
                         </div>
-                        <button className="p-2 hover:bg-white/5 rounded-full text-text-secondary transition-colors">
-                            <Filter className="w-4 h-4" />
-                        </button>
+                        <p className="text-[10px] font-black text-text-secondary tracking-[0.3em] uppercase animate-pulse">Scanning Vault...</p>
                     </div>
-                </header>
+                ) : !videos || videos.length === 0 ? (
+                    <div className="h-[70vh] flex flex-col items-center justify-center text-center space-y-10 group">
+                        <div className="relative">
+                            <div className="w-32 h-32 rounded-sm bg-surface rotate-3 group-hover:rotate-6 transition-transform relative z-10 border border-white/5 flex items-center justify-center shadow-2xl">
+                                <FileVideo className="w-12 h-12 text-white/5 group-hover:text-primary/20 transition-colors" />
+                            </div>
+                            <div className="absolute -inset-4 bg-primary/10 blur-3xl rounded-full opacity-50 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                        <div className="max-w-md space-y-4">
+                            <h3 className="text-3xl font-black text-white uppercase tracking-tighter italic">Vault is <span className="text-primary">Empty</span></h3>
+                            <p className="text-text-secondary text-sm font-medium leading-relaxed uppercase tracking-widest text-[10px]">
+                                No assets found. Initialize your first deployment to view results.
+                            </p>
+                        </div>
+                        <Link href="/upload" className="px-12 py-5 bg-primary text-white text-[11px] font-black tracking-[0.3em] rounded-sm hover:bg-primary-hover transition-all shadow-[0_20px_40px_rgba(200,16,46,0.3)] hover:translate-y-[-4px] uppercase italic">
+                            Initialize Upload
+                        </Link>
+                    </div>
+                ) : (
+                    <div className="space-y-6 animate-in fade-in duration-700">
+                        {/* Summary Header */}
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex items-center gap-6 text-[10px] font-black uppercase tracking-widest text-text-secondary">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-primary">TOTAL ASSETS:</span>
+                                    <span className="text-white">{videos.length}</span>
+                                </div>
+                            </div>
+                        </div>
 
-                {/* Content Area */}
-                <div className="flex-1 overflow-y-auto p-8">
-                    {isLoading ? (
-                        <div className="h-full flex flex-col items-center justify-center gap-4">
-                            <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                            <p className="text-text-secondary text-sm">Loading your library...</p>
+                        <div className="bg-surface/30 rounded-sm border border-white/5 overflow-hidden backdrop-blur-sm">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="border-b border-white/10 bg-black/40">
+                                        <th className="py-4 pl-6 pr-4 text-[10px] font-black uppercase tracking-widest text-text-secondary">Asset</th>
+                                        <th className="py-4 px-4 text-[10px] font-black uppercase tracking-widest text-text-secondary">Status</th>
+                                        <th className="py-4 px-4 text-[10px] font-black uppercase tracking-widest text-text-secondary">Date</th>
+                                        <th className="py-4 px-4 text-[10px] font-black uppercase tracking-widest text-text-secondary">Size</th>
+                                        <th className="py-4 pr-6 pl-4 text-right text-[10px] font-black uppercase tracking-widest text-text-secondary">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/[0.02]">
+                                    {videos.map((video) => (
+                                        <VideoRow key={video.id} video={video} />
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    ) : !videos || videos.length === 0 ? (
-                        <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
-                            <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center">
-                                <FileVideo className="w-10 h-10 text-white/20" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-white mb-2">No videos yet</h3>
-                                <p className="text-text-secondary text-sm max-w-sm">
-                                    Upload your first video to start processing and managing your content.
-                                </p>
-                            </div>
-                            <Link href="/upload" className="px-6 py-2.5 bg-primary text-white font-semibold rounded hover:bg-primary-hover transition-colors">
-                                UPLOAD VIDEOS
-                            </Link>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {videos.map((video) => (
-                                <VideoCard key={video.id} video={video} />
-                            ))}
-                        </div>
-                    )}
+                    </div>
+                )}
+            </div>
+
+            <div className="fixed bottom-8 left-72 right-8 flex justify-end pointer-events-none">
+                <div className="bg-black/80 backdrop-blur-xl border border-white/10 px-6 py-3 rounded-sm flex items-center gap-4 text-[9px] font-black uppercase tracking-widest text-text-secondary shadow-2xl pointer-events-auto">
+                    <Info className="w-3 h-3 text-primary" />
+                    <span>System Status: Operational</span>
                 </div>
-            </main>
-        </div>
-    );
-}
-
-function FileVideo(props: any) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-            <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-            <rect width="8" height="6" x="8" y="12" rx="1" />
-        </svg>
+            </div>
+        </Shell>
     );
 }

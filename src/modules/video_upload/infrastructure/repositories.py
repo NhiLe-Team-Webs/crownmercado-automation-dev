@@ -39,3 +39,11 @@ class VideoRepository:
         result = await self.session.execute(query)
         await self.session.commit()
         return result.scalar_one_or_none()
+
+    async def delete(self, video_id: UUID) -> bool:
+        video = await self.get_by_id(video_id)
+        if video:
+            await self.session.delete(video)
+            await self.session.commit()
+            return True
+        return False

@@ -2,94 +2,57 @@
 
 import React from 'react';
 import VideoUploader from '@/components/VideoUploader';
-import { LayoutDashboard, Library, Settings, LogOut } from 'lucide-react';
-import Link from 'next/link';
+import Shell from '@/components/Shell';
+import { useRouter } from 'next/navigation';
 
 export default function UploadPage() {
+    const router = useRouter();
+
+    const handleUploadComplete = (videoId: string) => {
+        // Option: delay redirect to let them see the success state
+        setTimeout(() => {
+            router.push('/library');
+        }, 1500);
+    };
+
     return (
-        <div className="flex min-h-screen bg-background font-sans">
-            {/* Sidebar - YouTube Studio Style */}
-            <aside className="w-64 border-r border-white/5 bg-surface flex flex-col">
-                <div className="p-6">
-                    <Link href="/" className="flex items-center gap-2 group">
-                        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <div className="w-4 h-4 bg-white rounded-sm" />
-                        </div>
-                        <span className="text-lg font-bold text-white tracking-tight">Studio</span>
-                    </Link>
-                </div>
-
-                <nav className="flex-1 px-4 space-y-1">
-                    <Link href="/upload" className="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-medium transition-colors">
-                        <LayoutDashboard className="w-5 h-5" />
-                        Dashboard
-                    </Link>
-                    <Link href="/library" className="flex items-center gap-3 px-3 py-2 rounded-lg text-text-secondary hover:bg-white/5 hover:text-white transition-colors">
-                        <Library className="w-5 h-5" />
-                        Content
-                    </Link>
-                    <Link href="/settings" className="flex items-center gap-3 px-3 py-2 rounded-lg text-text-secondary hover:bg-white/5 hover:text-white transition-colors">
-                        <Settings className="w-5 h-5" />
-                        Settings
-                    </Link>
-                </nav>
-
-                <div className="p-4 border-t border-white/5">
-                    <button className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-error hover:bg-error/10 transition-colors">
-                        <LogOut className="w-5 h-5" />
-                        Sign out
-                    </button>
-                </div>
-            </aside>
-
-            {/* Main Content */}
-            <main className="flex-1 flex flex-col overflow-hidden">
-                {/* Header */}
-                <header className="h-16 border-b border-white/5 flex items-center justify-between px-8 bg-background/50 backdrop-blur-md">
-                    <div className="flex items-center gap-4">
-                        <h1 className="text-lg font-semibold text-white">Channel dashboard</h1>
+        <Shell title="Pro Pipeline">
+            <div className="min-h-[calc(100vh-64px)] py-16 px-8 flex flex-col items-center">
+                <div className="max-w-4xl w-full">
+                    <div className="mb-16 text-center animate-in fade-in slide-in-from-top-4 duration-1000">
+                        <h1 className="text-primary text-5xl font-black uppercase tracking-tighter italic mb-4">
+                            PRO <span className="text-white">ASSET</span> PIPELINE
+                        </h1>
+                        <p className="text-text-secondary text-sm font-bold uppercase tracking-[0.2em] max-w-2xl mx-auto leading-relaxed">
+                            Deploy your content into the automated processing core. <br />
+                            Sequential multi-stage rendering and AI transcription enabled.
+                        </p>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <button className="px-4 py-2 bg-primary text-white text-sm font-medium rounded hover:bg-primary-hover transition-colors">
-                            CREATE
-                        </button>
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent-blue" />
-                    </div>
-                </header>
 
-                {/* Scrollable Area */}
-                <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                    <div className="max-w-4xl mx-auto">
-                        <div className="mb-8">
-                            <h2 className="text-2xl font-bold text-white mb-2">Upload videos</h2>
-                            <p className="text-text-secondary text-sm">Upload your video files to start processing them.</p>
-                        </div>
+                    <VideoUploader onUploadComplete={handleUploadComplete} />
 
-                        <VideoUploader
-                            onUploadComplete={(id) => console.log('Upload finished:', id)}
-                        />
-
-                        {/* Quick Tips Box */}
-                        <div className="mt-12 p-6 rounded-xl bg-surface-hover border border-white/5">
-                            <h3 className="text-sm font-semibold text-white mb-3">Upload tips</h3>
-                            <ul className="space-y-3 text-xs text-text-secondary">
-                                <li className="flex gap-2">
-                                    <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
-                                    <span>Your video will be secure and private until you choose to publish it.</span>
-                                </li>
-                                <li className="flex gap-2">
-                                    <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
-                                    <span>Use chunked uploads for large files (automatically handled).</span>
-                                </li>
-                                <li className="flex gap-2">
-                                    <div className="w-1 h-1 rounded-full bg-primary mt-1.5 shrink-0" />
-                                    <span>If your connection drops, refresh the page to resume from where you left off.</span>
-                                </li>
-                            </ul>
+                    <div className="mt-20 border-t border-white/5 pt-12 animate-in fade-in duration-1000 delay-500">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
+                            <div className="text-center group">
+                                <span className="text-[9px] font-black text-primary tracking-widest uppercase block mb-2 group-hover:scale-110 transition-transform">Stage 01</span>
+                                <p className="text-[10px] font-bold text-white uppercase tracking-widest opacity-60">Silence Removal</p>
+                            </div>
+                            <div className="text-center group">
+                                <span className="text-[9px] font-black text-primary tracking-widest uppercase block mb-2 group-hover:scale-110 transition-transform">Stage 02</span>
+                                <p className="text-[10px] font-bold text-white uppercase tracking-widest opacity-60">AI Transcription</p>
+                            </div>
+                            <div className="text-center group">
+                                <span className="text-[9px] font-black text-primary tracking-widest uppercase block mb-2 group-hover:scale-110 transition-transform">Stage 03</span>
+                                <p className="text-[10px] font-bold text-white uppercase tracking-widest opacity-60">Media Segmentation</p>
+                            </div>
+                            <div className="text-center group">
+                                <span className="text-[9px] font-black text-primary tracking-widest uppercase block mb-2 group-hover:scale-110 transition-transform">Stage 04</span>
+                                <p className="text-[10px] font-bold text-white uppercase tracking-widest opacity-60">Master Rendering</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </main>
-        </div>
+            </div>
+        </Shell>
     );
 }

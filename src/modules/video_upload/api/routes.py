@@ -33,7 +33,8 @@ async def initiate_upload(
     s3_key = f"uploads/{video_id}/{request.filename}"
     
     # Initiate S3 Multipart
-    s3_response = await storage.initiate_multipart_upload(s3_key)
+    content_type = request.content_type or "video/mp4"
+    s3_response = await storage.initiate_multipart_upload(s3_key, content_type)
     
     # Save to DB
     await repo.create({
@@ -92,10 +93,19 @@ async def complete_upload(
         parts=domain_parts
     )
     
+    # Get file info from S3
+    try:
+        info = await storage.get_object_info(video.s3_key)
+        file_size = info.get("size")
+    except Exception as e:
+        print(f"Failed to get object info: {e}")
+        file_size = None
+
     # Update DB status
     await repo.update_status(
         video_id=video.id,
         status="completed",
+        file_size_bytes=file_size,
         completed_at=datetime.utcnow()
     )
     
@@ -105,6 +115,7 @@ async def complete_upload(
 async def get_download_url(
     video_id: UUID,
     db: DatabaseSession,
+    disposition: str = "inline",
     storage: S3MultipartStorageAdapter = Depends(get_storage)
 ):
     repo = VideoRepository(db)
@@ -112,13 +123,32 @@ async def get_download_url(
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
     
-    # We can reuse generate_presigned_url if we modify it to support GET
-    # Or add a specific method to storage adapter.
-    # For now, let's assume generate_presigned_url in S3StorageService (from Step 1) 
-    # but we are using S3MultipartStorageAdapter here. Let's add it to the adapter.
-    
-    url = await storage.generate_download_url(video.s3_key)
+    filename = video.original_filename if disposition == "attachment" else None
+    url = await storage.generate_download_url(video.s3_key, filename=filename)
     return {"url": url}
+
+@router.delete("/{video_id}")
+async def delete_video(
+    video_id: UUID,
+    db: DatabaseSession,
+    storage: S3MultipartStorageAdapter = Depends(get_storage)
+):
+    repo = VideoRepository(db)
+    video = await repo.get_by_id(video_id)
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    
+    # Delete from S3
+    try:
+        await storage.delete_object(video.s3_key)
+    except Exception as e:
+        print(f"Failed to delete from S3: {e}")
+        # Continue to delete from DB even if S3 fails (or handle as needed)
+    
+    # Delete from DB
+    await repo.delete(video_id)
+    
+    return {"status": "success", "message": "Video purged"}
 
 @router.get("/my-videos", response_model=List[VideoResponse])
 async def list_videos(db: DatabaseSession):

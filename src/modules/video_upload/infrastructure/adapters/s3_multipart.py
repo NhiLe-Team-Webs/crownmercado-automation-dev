@@ -1,8 +1,9 @@
 import aioboto3
 from botocore.exceptions import ClientError
-from typing import List
+from typing import List, Dict, Any
 from src.modules.video_upload.domain.ports import IMultipartStoragePort, InitiateResponse, CompletedPart
 from src.shared.config.settings import settings
+from botocore.config import Config
 
 class S3MultipartStorageAdapter(IMultipartStoragePort):
     def __init__(self):
@@ -10,18 +11,26 @@ class S3MultipartStorageAdapter(IMultipartStoragePort):
         self.bucket_name = settings.S3_BUCKET_NAME
         self.region = settings.AWS_REGION
 
-    async def initiate_multipart_upload(self, remote_path: str) -> InitiateResponse:
+    def _get_config(self):
+        return Config(
+            signature_version="s3v4",
+            s3={'addressing_style': 'virtual'}
+        )
+
+    async def initiate_multipart_upload(self, remote_path: str, content_type: str) -> InitiateResponse:
         async with self.session.client(
             "s3",
             region_name=self.region,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            endpoint_url=settings.S3_ENDPOINT_URL if settings.S3_ENDPOINT_URL else None
+            endpoint_url=settings.S3_ENDPOINT_URL if settings.S3_ENDPOINT_URL else None,
+            config=self._get_config()
         ) as s3:
             try:
                 response = await s3.create_multipart_upload(
                     Bucket=self.bucket_name,
-                    Key=remote_path
+                    Key=remote_path,
+                    ContentType=content_type
                 )
                 return InitiateResponse(
                     upload_id=response['UploadId'],
@@ -42,7 +51,8 @@ class S3MultipartStorageAdapter(IMultipartStoragePort):
             region_name=self.region,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            endpoint_url=settings.S3_ENDPOINT_URL if settings.S3_ENDPOINT_URL else None
+            endpoint_url=settings.S3_ENDPOINT_URL if settings.S3_ENDPOINT_URL else None,
+            config=self._get_config()
         ) as s3:
             try:
                 url = await s3.generate_presigned_url(
@@ -70,7 +80,8 @@ class S3MultipartStorageAdapter(IMultipartStoragePort):
             region_name=self.region,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            endpoint_url=settings.S3_ENDPOINT_URL if settings.S3_ENDPOINT_URL else None
+            endpoint_url=settings.S3_ENDPOINT_URL if settings.S3_ENDPOINT_URL else None,
+            config=self._get_config()
         ) as s3:
             try:
                 # S3 requires parts to be sorted by PartNumber
@@ -99,7 +110,8 @@ class S3MultipartStorageAdapter(IMultipartStoragePort):
             region_name=self.region,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            endpoint_url=settings.S3_ENDPOINT_URL if settings.S3_ENDPOINT_URL else None
+            endpoint_url=settings.S3_ENDPOINT_URL if settings.S3_ENDPOINT_URL else None,
+            config=self._get_config()
         ) as s3:
             try:
                 await s3.abort_multipart_upload(
@@ -110,20 +122,58 @@ class S3MultipartStorageAdapter(IMultipartStoragePort):
             except ClientError as e:
                 raise e
 
-    async def generate_download_url(self, remote_path: str, expiration: int = 3600) -> str:
+    async def generate_download_url(self, remote_path: str, expiration: int = 3600, filename: str = None) -> str:
         async with self.session.client(
             "s3",
             region_name=self.region,
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            endpoint_url=settings.S3_ENDPOINT_URL if settings.S3_ENDPOINT_URL else None
+            endpoint_url=settings.S3_ENDPOINT_URL if settings.S3_ENDPOINT_URL else None,
+            config=self._get_config()
         ) as s3:
             try:
+                params = {'Bucket': self.bucket_name, 'Key': remote_path}
+                if filename:
+                    # Set response content disposition to suggest filename for download
+                    params['ResponseContentDisposition'] = f'attachment; filename="{filename}"'
+
                 url = await s3.generate_presigned_url(
                     ClientMethod='get_object',
-                    Params={'Bucket': self.bucket_name, 'Key': remote_path},
+                    Params=params,
                     ExpiresIn=expiration
                 )
                 return url
+            except ClientError as e:
+                raise e
+
+    async def delete_object(self, remote_path: str) -> None:
+        async with self.session.client(
+            "s3",
+            region_name=self.region,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            endpoint_url=settings.S3_ENDPOINT_URL if settings.S3_ENDPOINT_URL else None,
+            config=self._get_config()
+        ) as s3:
+            try:
+                await s3.delete_object(Bucket=self.bucket_name, Key=remote_path)
+            except ClientError as e:
+                raise e
+
+    async def get_object_info(self, remote_path: str) -> Dict[str, Any]:
+        async with self.session.client(
+            "s3",
+            region_name=self.region,
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+            endpoint_url=settings.S3_ENDPOINT_URL if settings.S3_ENDPOINT_URL else None,
+            config=self._get_config()
+        ) as s3:
+            try:
+                response = await s3.head_object(Bucket=self.bucket_name, Key=remote_path)
+                return {
+                    "size": response.get('ContentLength', 0),
+                    "content_type": response.get('ContentType', 'application/octet-stream')
+                }
             except ClientError as e:
                 raise e
