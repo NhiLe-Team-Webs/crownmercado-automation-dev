@@ -468,6 +468,15 @@
     "source": "unknown"
   },
   {
+    "id": "clean-architecture-setup",
+    "path": "skills/clean-architecture-setup",
+    "category": "uncategorized",
+    "name": "Clean Architecture Setup",
+    "description": "Setup and implement Clean Architecture with Domain-Driven Design for web applications, ensuring proper separation between core business logic and infrastructure code.",
+    "risk": "unknown",
+    "source": "unknown"
+  },
+  {
     "id": "clean-code",
     "path": "skills/clean-code",
     "category": "uncategorized",
