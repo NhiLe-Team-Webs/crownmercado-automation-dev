@@ -1,11 +1,11 @@
 {
     "Servers": {
         "1": {
-            "Name": "one-click-db",
+            "Name": "crownmercado-db",
             "Group": "Servers",
             "Host": "postgres",
             "Port": 5432,
-            "MaintenanceDB": "one_click_video",
+            "MaintenanceDB": "crownmercado_automation_dev",
             "Username": "postgres",
             "SSLMode": "prefer",
             "PassFile": "/tmp/pgpassfile"
