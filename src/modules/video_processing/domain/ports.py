@@ -35,3 +35,24 @@ class IRenderEnginePort(ABC):
     async def render(self, job_id: UUID, layers: list) -> str:
         """Trả về output file path"""
         pass
+
+class IStoragePort(ABC):
+    @abstractmethod
+    async def upload_file(self, local_path: str, remote_path: str) -> str:
+        """Upload file và trả về public/internal URL"""
+        pass
+
+    @abstractmethod
+    async def download_file(self, remote_path: str, local_path: str) -> None:
+        """Download file từ storage về local"""
+        pass
+
+    @abstractmethod
+    async def generate_presigned_url(self, remote_path: str, expiration: int = 3600) -> str:
+        """Tạo URL tạm thời để upload/download trực tiếp"""
+        pass
+
+    @abstractmethod
+    async def delete_file(self, remote_path: str) -> None:
+        """Xóa file khỏi storage"""
+        pass
