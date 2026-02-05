@@ -1,0 +1,20 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies first for better caching
+COPY frontend/package.json ./
+# Check if lock file exists before copying to avoid errors if it doesn't
+COPY frontend/package-lock.json* ./
+
+RUN npm install
+
+# Copy the rest of the application
+COPY frontend/ ./
+
+EXPOSE 3000
+
+# Next.js dev server with polling for Windows compatibility
+ENV WATCHPACK_POLLING=true
+
+CMD ["npm", "run", "dev"]

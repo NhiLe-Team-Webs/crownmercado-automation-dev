@@ -119,3 +119,10 @@ async def get_download_url(
     
     url = await storage.generate_download_url(video.s3_key)
     return {"url": url}
+
+@router.get("/my-videos", response_model=List[VideoResponse])
+async def list_videos(db: DatabaseSession):
+    repo = VideoRepository(db)
+    # user_id is None for now as auth is not implemented
+    videos = await repo.get_by_user_id(user_id=None)
+    return videos

@@ -1,7 +1,7 @@
 import aioboto3
 from botocore.exceptions import ClientError
 from typing import List
-from ..domain.ports import IMultipartStoragePort, InitiateResponse, CompletedPart
+from src.modules.video_upload.domain.ports import IMultipartStoragePort, InitiateResponse, CompletedPart
 from src.shared.config.settings import settings
 
 class S3MultipartStorageAdapter(IMultipartStoragePort):
