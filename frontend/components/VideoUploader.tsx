@@ -8,297 +8,236 @@ const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB parts
 interface VideoUploaderProps {
     projectId?: string;
     onUploadComplete: (videoId: string) => void;
+    onClose?: () => void;
 }
 
-export default function VideoUploader({ projectId, onUploadComplete }: VideoUploaderProps) {
+import { Upload, X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+
+export default function VideoUploader({ onUploadComplete, onClose }: VideoUploaderProps) {
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
-    const [status, setStatus] = useState<string>('Ready to start');
+    const [status, setStatus] = useState<string>('Select files to upload');
     const [error, setError] = useState<string | null>(null);
-    const [interruptedUploads, setInterruptedUploads] = useState<{ fingerprint: string, filename: string, progress: number }[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
-    // UX Protection: Prevent accidental tab closure during upload
+    const getFileFingerprint = (f: File) => `upload_${f.name}_${f.size}_${f.lastModified}`;
+
+    // Prevent accidental tab closure
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
             if (uploading) {
                 e.preventDefault();
-                e.returnValue = 'Are you sure you want to leave? Data transmission in progress.';
-                return 'Are you sure you want to leave?';
+                e.returnValue = '';
             }
         };
-
         window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [uploading]);
-
-    // Resume Detection: Scan for interrupted uploads on mount
-    useEffect(() => {
-        const scanUploads = () => {
-            const found: { fingerprint: string, filename: string, progress: number }[] = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key?.startsWith('upload_')) {
-                    try {
-                        const state = JSON.parse(localStorage.getItem(key)!);
-                        if (state.parts && state.parts.length > 0) {
-                            const filename = state.filename || key.replace('upload_', '').split('_')[0];
-                            const totalParts = state.totalParts || 100;
-                            const progress = Math.round((state.parts.length / totalParts) * 100);
-
-                            if (progress < 100) {
-                                found.push({ fingerprint: key, filename, progress });
-                            }
-                        }
-                    } catch (e) {
-                        console.error("Error parsing upload state", e);
-                    }
-                }
-            }
-            setInterruptedUploads(found);
-        };
-        scanUploads();
-    }, [uploading]);
-
-    const getFileFingerprint = (f: File) => {
-        return `upload_${f.name}_${f.size}_${f.lastModified}`;
-    };
-
-    const saveUploadState = (fingerprint: string, state: any) => {
-        localStorage.setItem(fingerprint, JSON.stringify(state));
-    };
-
-    const getUploadState = (fingerprint: string) => {
-        const saved = localStorage.getItem(fingerprint);
-        return saved ? JSON.parse(saved) : null;
-    };
-
-    const clearUploadState = (fingerprint: string) => {
-        localStorage.removeItem(fingerprint);
-    };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0];
             setFile(selectedFile);
             setError(null);
+            setProgress(0);
+            setStatus('Ready to ingest');
+            // Auto-trigger upload if we have a file
+            setTimeout(() => startUpload(selectedFile), 100);
+        }
+    };
 
-            const fingerprint = getFileFingerprint(selectedFile);
-            const savedState = getUploadState(fingerprint);
+    const cancelUpload = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            setStatus('Aborting pipeline...');
+            setUploading(false);
+            setError('Ingress terminated by operator.');
 
-            if (savedState) {
-                const uploadedCount = savedState.parts?.length || 0;
-                const totalParts = Math.ceil(selectedFile.size / CHUNK_SIZE);
-                const percent = Math.round((uploadedCount / totalParts) * 100);
-                setProgress(percent);
-                setStatus(`Interrupted found: ${percent}% complete. Ready to resume.`);
-            } else {
-                setProgress(0);
-                setStatus('Media source selected');
+            // Clear resumable state on explicit cancel
+            if (file) {
+                localStorage.removeItem(getFileFingerprint(file));
             }
         }
     };
 
-    const uploadFile = async () => {
-        if (!file) return;
+    const startUpload = async (fileToUpload: File) => {
+        if (!fileToUpload) return;
+        const fingerprint = getFileFingerprint(fileToUpload);
 
         try {
             setUploading(true);
             setError(null);
+            abortControllerRef.current = new AbortController();
 
-            const fingerprint = getFileFingerprint(file);
-            const savedState = getUploadState(fingerprint);
+            // Check for resumable state
+            const storedState = localStorage.getItem(fingerprint);
+            let upload_id: string;
+            let video_id: string;
+            let uploadedParts: any[] = [];
 
-            let currentUploadId = savedState?.upload_id;
-            let currentVideoId = savedState?.video_id;
-            let alreadyUploadedParts = savedState?.parts || [];
-
-            // 1. Initiate Upload
-            if (!currentUploadId) {
-                setStatus('Initiating secure pipeline...');
-                const { upload_id, video_id } = await api.initiateUpload(file.name, file.type);
-                currentUploadId = upload_id;
-                currentVideoId = video_id;
-
-                saveUploadState(fingerprint, {
-                    upload_id: currentUploadId,
-                    video_id: currentVideoId,
-                    filename: file.name,
-                    totalParts: Math.ceil(file.size / CHUNK_SIZE),
-                    parts: []
-                });
+            if (storedState) {
+                const state = JSON.parse(storedState);
+                upload_id = state.upload_id;
+                video_id = state.video_id;
+                uploadedParts = state.uploadedParts || [];
+                setStatus('Resuming previous pipeline...');
             } else {
-                setStatus('Re-establishing stream connection...');
+                setStatus('Initiating pipeline...');
+                const result = await api.initiateUpload(fileToUpload.name, fileToUpload.type);
+                upload_id = result.upload_id;
+                video_id = result.video_id;
             }
 
-            // 2. Prepare chunks
-            const totalParts = Math.ceil(file.size / CHUNK_SIZE);
-            const allPartNumbers = Array.from({ length: totalParts }, (_, i) => i + 1);
-            const uploadedPartNumbers = new Set(alreadyUploadedParts.map((p: any) => p.PartNumber));
-            const missingPartNumbers = allPartNumbers.filter(num => !uploadedPartNumbers.has(num));
+            const totalParts = Math.ceil(fileToUpload.size / CHUNK_SIZE);
+            const uploadedPartNumbers = new Set(uploadedParts.map(p => p.PartNumber));
 
-            if (missingPartNumbers.length > 0) {
-                const currentSessionParts = [...alreadyUploadedParts];
+            for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+                if (abortControllerRef.current.signal.aborted) return;
 
-                for (const partNumber of missingPartNumbers) {
-                    const start = (partNumber - 1) * CHUNK_SIZE;
-                    const end = Math.min(start + CHUNK_SIZE, file.size);
-                    const chunk = file.slice(start, end);
-
-                    setStatus(`Deploying segment ${partNumber}/${totalParts}...`);
-
-                    const { url } = await api.getPresignedUrl(currentVideoId, currentUploadId, partNumber);
-                    const etag = await api.uploadChunk(url, chunk);
-
-                    if (!etag) throw new Error(`Transmission failed for segment ${partNumber}`);
-
-                    const newPart = {
-                        PartNumber: partNumber,
-                        ETag: etag.replace(/"/g, '')
-                    };
-
-                    currentSessionParts.push(newPart);
-
-                    saveUploadState(fingerprint, {
-                        upload_id: currentUploadId,
-                        video_id: currentVideoId,
-                        filename: file.name,
-                        totalParts: totalParts,
-                        parts: currentSessionParts
-                    });
-
-                    setProgress(Math.round((currentSessionParts.length / totalParts) * 100));
+                // Skip if already uploaded
+                if (uploadedPartNumbers.has(partNumber)) {
+                    setProgress(Math.round((partNumber / totalParts) * 100));
+                    continue;
                 }
-                alreadyUploadedParts = currentSessionParts;
+
+                const start = (partNumber - 1) * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, fileToUpload.size);
+                const chunk = fileToUpload.slice(start, end);
+
+                setStatus(`Syncing segment ${partNumber}/${totalParts}`);
+                const { url } = await api.getPresignedUrl(video_id, upload_id, partNumber);
+                const etag = await api.uploadChunk(url, chunk);
+                if (!etag) throw new Error(`Transmission failed for segment ${partNumber}: ETag missing`);
+
+                uploadedParts.push({ PartNumber: partNumber, ETag: etag.replace(/"/g, '') });
+                uploadedPartNumbers.add(partNumber);
+
+                // Save progress to localStorage
+                localStorage.setItem(fingerprint, JSON.stringify({
+                    upload_id,
+                    video_id,
+                    uploadedParts
+                }));
+
+                setProgress(Math.round((partNumber / totalParts) * 100));
             }
 
-            // 3. Complete Upload
-            setStatus('Finalizing asset ingestion...');
-            await api.completeUpload(currentVideoId, currentUploadId, alreadyUploadedParts);
+            setStatus('Finalizing deployment...');
+            await api.completeUpload(video_id, upload_id, uploadedParts);
 
-            clearUploadState(fingerprint);
+            // Clear storage on success
+            localStorage.removeItem(fingerprint);
+
             setUploading(false);
-            setStatus('Deployment Successful');
-            setProgress(100);
-            onUploadComplete(currentVideoId);
-
+            onUploadComplete(video_id);
         } catch (err: any) {
-            console.error(err);
-            setError(err.message || 'Transmission error detected');
-            setStatus('Pipeline compromised');
+            if (err.name === 'AbortError') return;
+            setError(err.message || 'Transmission failed');
             setUploading(false);
+        } finally {
+            abortControllerRef.current = null;
         }
     };
 
     return (
-        <div className="glass-panel p-10 max-w-4xl mx-auto border border-white/5 shadow-2xl">
-            {/* Interrupted Upload Notice */}
-            {interruptedUploads.length > 0 && !uploading && !file && (
-                <div className="bg-primary/5 border border-primary/20 rounded-sm p-5 mb-8 flex items-center justify-between gap-4 animate-in slide-in-from-top duration-300">
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
-                            <span className="text-primary font-black">!</span>
-                        </div>
-                        <div>
-                            <strong className="block text-primary text-[10px] uppercase font-black tracking-widest mb-1">
-                                Interrupted sequence detected
-                            </strong>
-                            <p className="m-0 text-[10px] text-text-secondary uppercase tracking-tight">
-                                Continue <span className="text-white font-bold">{interruptedUploads[0].filename}</span> from {interruptedUploads[0].progress}%.
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={() => {
-                            clearUploadState(interruptedUploads[0].fingerprint);
-                            setInterruptedUploads([]);
-                        }}
-                        className="text-[9px] font-black uppercase text-text-secondary hover:text-white transition-colors"
-                    >
-                        Discard & Start New
-                    </button>
-                </div>
+        <div className="bg-[#1C1C1C] w-full max-w-3xl mx-auto rounded-2xl border border-[#333333] shadow-2xl overflow-hidden flex flex-col h-[600px] animate-in fade-in zoom-in duration-300 relative">
+            {onClose && (
+                <button
+                    onClick={onClose}
+                    className="absolute top-6 right-6 p-2 text-text-secondary hover:text-white transition-colors z-50"
+                >
+                    <X size={24} />
+                </button>
             )}
-
-            <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr] gap-12">
-                {/* Left Side: Upload Zone */}
-                <div>
-                    <h2 className="text-lg font-black text-white uppercase tracking-tighter italic mb-6">
-                        Media <span className="text-primary">Source</span>
-                    </h2>
-                    <div
-                        onClick={() => !uploading && fileInputRef.current?.click()}
-                        className={`card-hover relative border-2 border-dashed border-white/10 rounded-sm p-16 text-center bg-white/[0.01] transition-all cursor-pointer ${uploading ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary/40'}`}
-                    >
+            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
+                {!uploading && !error && progress < 100 && (
+                    <div className="animate-in fade-in duration-500 w-full">
+                        <div
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-32 h-32 rounded-full bg-black/30 flex items-center justify-center mb-8 mx-auto cursor-pointer hover:bg-black/50 transition-all border border-dashed border-white/10 hover:border-primary group"
+                        >
+                            <Upload size={48} className="text-text-secondary group-hover:text-primary transition-colors" />
+                        </div>
                         <input
                             type="file"
                             ref={fileInputRef}
-                            onChange={handleFileChange}
                             className="hidden"
-                            disabled={uploading}
+                            onChange={handleFileChange}
                             accept="video/*"
                         />
-                        <div className="text-5xl mb-6 opacity-20 group-hover:opacity-40 transition-opacity">🎬</div>
-                        <p className="font-black text-xs text-white uppercase tracking-widest mb-2 leading-relaxed max-w-[200px] mx-auto">
-                            {file ? file.name : 'Initialize stream or drop asset'}
-                        </p>
-                        <p className="text-[9px] font-bold text-text-secondary uppercase tracking-[0.2em]">
-                            {file ? `${(file.size / (1024 * 1024)).toFixed(2)} MB` : 'MP4 • MOV • AVI'}
-                        </p>
-                    </div>
+                        <h4 className="text-xl font-medium text-white mb-2">Drag and drop video files to upload</h4>
 
-                    <div className="mt-10">
                         <button
-                            onClick={uploadFile}
-                            disabled={!file || uploading}
-                            className="btn-primary w-full py-4 text-[10px] italic"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="px-8 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-lg transition-all active:scale-95 shadow-lg shadow-primary/20"
                         >
-                            {uploading ? 'INGESTING BYTES...' : 'Execute Deployment'}
+                            SELECT FILES
                         </button>
                     </div>
-                </div>
+                )}
 
-                {/* Right Side: Deployment Status */}
-                <div className="md:border-l md:border-white/5 md:pl-12">
-                    <h3 className="text-[9px] font-black text-text-secondary uppercase tracking-[0.3em] mb-8">
-                        Transmission Status
-                    </h3>
-
-                    <div className="bg-black/40 rounded-sm p-6 border border-white/5 mb-8 backdrop-blur-md">
-                        <div className="flex justify-between mb-4">
-                            <span className="text-[10px] font-black text-text-secondary uppercase tracking-widest italic">{status}</span>
-                            <span className="text-[10px] font-black text-primary tracking-widest">{progress}%</span>
-                        </div>
-                        <div className="progress-container h-1.5">
-                            <div className="progress-fill" style={{ width: `${progress}%` }} />
-                        </div>
+                {uploading && (
+                    <div className="w-full max-w-md animate-in fade-in duration-300">
+                        <div className="w-24 h-24 rounded-full border-4 border-primary/20 border-t-primary animate-spin mb-8 mx-auto" />
+                        <h4 className="text-2xl font-bold text-white mb-4">Ingesting bytes...</h4>
+                        <p className="text-sm text-text-secondary uppercase tracking-[0.2em] font-black mb-8">{status}</p>
+                        <button
+                            onClick={cancelUpload}
+                            className="px-6 py-2 border border-primary/40 text-primary text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-primary/10 transition-all"
+                        >
+                            Cancel Ingress
+                        </button>
                     </div>
+                )}
 
-                    <div className="flex flex-col gap-6">
-                        <div className={`flex items-center gap-4 transition-opacity ${uploading ? 'opacity-100' : 'opacity-30'}`}>
-                            <div className={`w-2 h-2 rounded-full ${uploading ? 'bg-primary animate-ping' : 'bg-white'}`} />
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Protocol Init</span>
+                {!uploading && progress === 100 && (
+                    <div className="animate-in zoom-in duration-500">
+                        <div className="w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center mb-8 mx-auto">
+                            <CheckCircle2 size={56} className="text-green-500" />
                         </div>
-                        <div className={`flex items-center gap-4 transition-opacity ${progress > 0 ? 'opacity-100' : 'opacity-30'}`}>
-                            <div className={`w-2 h-2 rounded-full ${progress > 0 && progress < 100 ? 'bg-primary animate-pulse' : progress === 100 ? 'bg-primary' : 'bg-white'}`} />
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Stream Tunneling</span>
-                        </div>
-                        <div className={`flex items-center gap-4 transition-opacity ${progress === 100 ? 'opacity-100' : 'opacity-30'}`}>
-                            <div className={`w-2 h-2 rounded-full ${progress === 100 ? 'bg-primary' : 'bg-white'}`} />
-                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Asset Finalization</span>
-                        </div>
+                        <h4 className="text-2xl font-bold text-white mb-2">Upload Complete</h4>
+                        <p className="text-sm text-text-secondary mb-8">Your video has been successfully added to the vault.</p>
+                        <Link href="/library" className="text-primary font-bold hover:underline uppercase tracking-widest text-sm">Return to Library</Link>
                     </div>
+                )}
 
-                    {error && (
-                        <div className="mt-10 p-4 bg-primary/5 border-l-2 border-primary text-[10px] font-black text-white uppercase tracking-widest">
-                            ERROR: <span className="text-text-secondary font-bold ml-2">{error}</span>
+                {error && (
+                    <div className="animate-in shake duration-500">
+                        <div className="w-24 h-24 rounded-full bg-red-500/20 flex items-center justify-center mb-8 mx-auto">
+                            <AlertCircle size={56} className="text-red-500" />
                         </div>
-                    )}
-                </div>
+                        <h4 className="text-2xl font-bold text-white mb-2">Deployment Failed</h4>
+                        <p className="text-sm text-red-400 mb-8 max-w-md">{error}</p>
+                        <button onClick={() => {
+                            setError(null);
+                            setProgress(0);
+                            setFile(null);
+                        }} className="text-white bg-white/10 px-6 py-2 rounded-lg font-bold hover:bg-white/20 transition-all uppercase text-xs tracking-widest">Restart Pipeline</button>
+                    </div>
+                )}
             </div>
+
+            {/* Progress Bar Footer */}
+            {(uploading || (progress > 0 && progress < 100)) && (
+                <div className="px-12 py-8 bg-black/40 border-t border-[#333333]">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <Loader2 size={16} className="text-primary animate-spin" />
+                            <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">TRANSMISSION: {progress}%</span>
+                        </div>
+                        <span className="text-xs font-black text-white italic">{(file?.size ? (file.size * progress / 100 / (1024 * 1024)).toFixed(1) : 0)} MB / {(file?.size ? (file.size / (1024 * 1024)).toFixed(1) : 0)} MB</span>
+                    </div>
+                    <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                            className="h-full bg-primary shadow-[0_0_10px_#C8102E] transition-all duration-300"
+                            style={{ width: `${progress}%` }}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -3,72 +3,86 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Upload, Library as LibraryIcon, LogOut, Settings, HelpCircle } from 'lucide-react';
+import { Upload, Library as LibraryIcon, Menu } from 'lucide-react';
+import { useUpload } from './Shell';
 
-export default function Sidebar() {
+interface SidebarProps {
+    isCollapsed: boolean;
+    setIsCollapsed: (collapsed: boolean) => void;
+}
+
+export default function Sidebar({ isCollapsed, setIsCollapsed }: SidebarProps) {
     const pathname = usePathname();
+    const { openUploadModal } = useUpload();
 
     const menuItems = [
-        { label: 'Upload', icon: Upload, href: '/upload' },
-        { label: 'Library', icon: LibraryIcon, href: '/library' },
+        { label: 'Library', icon: LibraryIcon, href: '/library', type: 'link' },
     ];
 
     return (
-        <aside className="w-64 border-r border-white/5 bg-surface flex flex-col pt-6 shrink-0 z-30">
-            {/* Logo Section */}
-            <div className="px-6 mb-10">
-                <Link href="/" className="flex items-center gap-3 group">
-                    <div className="w-10 h-10 rounded-sm bg-primary flex items-center justify-center transform rotate-3 group-hover:rotate-12 transition-all duration-300 shadow-lg shadow-primary/20 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <span className="text-white font-black text-xl italic uppercase -skew-x-12 relative z-10">C</span>
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-sm font-black text-white uppercase tracking-widest leading-none">Crown</span>
-                        <span className="text-[10px] font-bold text-primary uppercase tracking-tighter">Mercado Studio</span>
-                    </div>
-                </Link>
+        <aside
+            className={`flex flex-col border-r border-[#333333] transition-all duration-300 bg-[#1C1C1C] ${isCollapsed ? 'w-20' : 'w-64'}`}
+        >
+            <div className="p-4 flex items-center justify-between h-16 shrink-0">
+                {!isCollapsed && (
+                    <Link href="/" className="flex items-center gap-3 px-2 group">
+                        <div className="w-8 h-8 rounded bg-[#C8102E] flex items-center justify-center font-bold shadow-lg shadow-primary/20 group-hover:scale-105 transition-transform">
+                            <span className="text-white italic font-black text-xs">CM</span>
+                        </div>
+                        <span className="font-bold text-sm tracking-tight uppercase text-white truncate">Crown Mercado</span>
+                    </Link>
+                )}
+                <button
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className={`p-2 hover:bg-white/10 rounded-full transition-colors ${isCollapsed ? 'mx-auto' : ''}`}
+                >
+                    <Menu size={20} className="text-text-secondary" />
+                </button>
             </div>
 
-            {/* Main Menu */}
-            <div className="flex-1 px-3 space-y-1">
-                <div className="px-4 mb-2">
-                    <span className="text-[10px] font-black text-text-secondary uppercase tracking-[0.2em]">Studio Menu</span>
-                </div>
+            <nav className="mt-4 flex-1 px-3 space-y-1">
                 {menuItems.map((item) => {
-                    const isActive = pathname === item.href;
+                    const isActive = item.type === 'link' && pathname === item.href;
+
+                    if (item.type === 'button') {
+                        return (
+                            <button
+                                key={item.label}
+                                onClick={item.onClick}
+                                className={`w-full flex items-center gap-4 py-3 px-3 transition-all rounded-lg relative text-text-secondary hover:text-white hover:bg-white/5`}
+                            >
+                                <item.icon size={20} />
+                                {!isCollapsed && (
+                                    <span className="text-sm font-medium">{item.label}</span>
+                                )}
+                            </button>
+                        );
+                    }
+
                     return (
                         <Link
                             key={item.label}
-                            href={item.href}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-sm transition-all group relative ${isActive
-                                    ? 'bg-primary/10 text-white font-black border-l-2 border-primary shadow-[inset_4px_0_10px_rgba(200,16,46,0.05)]'
-                                    : 'text-text-secondary hover:bg-white/5 hover:text-white'
-                                }`}
+                            href={item.href || '#'}
+                            className={`flex items-center gap-4 py-3 px-3 transition-all rounded-lg relative ${isActive ? 'text-white' : 'text-text-secondary hover:text-white hover:bg-white/5'}`}
                         >
-                            <item.icon className={`w-5 h-5 shrink-0 transition-colors ${isActive ? 'text-primary' : 'group-hover:text-primary'}`} />
-                            <span className="font-headline tracking-wide uppercase text-[11px] italic">{item.label}</span>
                             {isActive && (
-                                <div className="absolute right-2 w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(200,16,46,1)] animate-pulse" />
+                                <div className="absolute left-0 w-1 h-8 rounded-r-full bg-[#C8102E] shadow-[0_0_10px_#C8102E]" />
+                            )}
+                            <div className={isActive ? 'text-[#C8102E]' : ''}>
+                                <item.icon size={20} />
+                            </div>
+                            {!isCollapsed && (
+                                <span className={`text-sm font-medium ${isActive ? 'font-bold' : ''}`}>{item.label}</span>
                             )}
                         </Link>
                     );
                 })}
-            </div>
+            </nav>
 
-            {/* Bottom Section */}
-            <div className="px-3 py-6 space-y-1 bg-black/10 border-t border-white/5">
-                <Link
-                    href="#"
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-sm text-text-secondary hover:bg-white/5 hover:text-white transition-all group"
-                >
-                    <Settings className="w-4 h-4 shrink-0 group-hover:text-primary transition-colors" />
-                    <span className="font-headline tracking-wide uppercase text-[10px] italic">Settings</span>
-                </Link>
-                <div className="mt-4 pt-4 border-t border-white/5">
-                    <button className="flex items-center gap-3 px-4 py-3 w-full rounded-sm text-text-secondary hover:bg-primary/5 hover:text-primary transition-all group">
-                        <LogOut className="w-5 h-5 shrink-0 group-hover:translate-x-1 transition-transform" />
-                        <span className="font-headline tracking-wide uppercase text-[11px] font-black italic">Sign out</span>
-                    </button>
+            <div className="mb-4 pt-4 border-t border-[#333333] px-3 space-y-1">
+                <div className={`flex items-center gap-4 py-3 px-3 rounded-lg text-text-secondary ${isCollapsed ? 'justify-center' : ''}`}>
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-red-600 to-black border border-white/20 shrink-0"></div>
+                    {!isCollapsed && <span className="text-sm font-medium truncate">Văn Đức Tân</span>}
                 </div>
             </div>
         </aside>

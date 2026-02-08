@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.20",
+    "agentation": "^2.2.0",
     "idb": "^8.0.3",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",

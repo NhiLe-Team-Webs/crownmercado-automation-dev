@@ -44,69 +44,88 @@ export default function VideoCard({ video }: Props) {
 
     return (
         <>
-            <div className={`group bg-surface hover:bg-surface-hover border border-white/5 rounded-sm overflow-hidden transition-all duration-300 hover:translate-y-[-4px] hover:shadow-[0_10px_40px_rgba(0,0,0,0.6)] ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}>
-                {/* Thumbnail Placeholder */}
-                <div className="aspect-video bg-black/40 relative flex items-center justify-center overflow-hidden border-b border-white/5">
-                    <FileVideo className="w-10 h-10 text-white/5 group-hover:scale-110 group-hover:text-primary/20 transition-all duration-700" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60" />
+            <div className={`group bg-surface/30 backdrop-blur-3xl border border-white/5 rounded-[2rem] overflow-hidden transition-all duration-700 hover:scale-[1.02] hover:shadow-[0_40px_80px_rgba(0,0,0,0.8)] relative h-full flex flex-col ${isDeleting ? 'opacity-30 pointer-events-none' : ''}`}>
 
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                {/* Thumbnail Layer */}
+                <div className="aspect-video bg-black/40 relative flex items-center justify-center overflow-hidden">
+                    <FileVideo className="w-12 h-12 text-white/5 group-hover:scale-110 group-hover:text-primary/20 transition-all duration-1000" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+
+                    {/* Active Overlay */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-500 flex items-center justify-center bg-primary/10 backdrop-blur-[4px]">
                         {video.status === 'completed' && (
                             <button
                                 onClick={() => setShowPlayer(true)}
-                                className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center scale-90 group-hover:scale-100 transition-transform shadow-2xl shadow-primary/40 pointer-events-auto"
+                                className="w-16 h-16 rounded-2xl bg-primary text-white flex items-center justify-center scale-75 group-hover:scale-100 transition-all duration-500 shadow-2xl shadow-primary/50 pointer-events-auto transform hover:rotate-6 active:scale-90"
                             >
-                                <Play className="w-5 h-5 fill-current ml-1" />
+                                <Play className="w-6 h-6 fill-current ml-1" />
                             </button>
                         )}
                     </div>
 
-                    <div className="absolute bottom-3 left-3 flex items-center gap-2">
+                    {/* Status Badge */}
+                    <div className="absolute top-4 left-4 z-10 flex items-center gap-2 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 group-hover:border-primary/40 transition-colors duration-500">
                         {video.status === 'completed' ? (
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_10px_rgba(34,197,94,1)] animate-pulse" />
                         ) : (
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse shadow-[0_0_8px_rgba(200,16,46,0.6)]" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-[0_0_10px_rgba(200,16,46,1)] animate-[ping_1.5s_infinite]" />
                         )}
-                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white bg-black/80 px-2 py-0.5 rounded-sm">
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white italic">
                             {video.status}
                         </span>
                     </div>
+
+                    {/* Corner Tag */}
+                    <div className="absolute bottom-4 right-4 text-[9px] font-black text-white/40 uppercase tracking-widest border border-white/5 px-2 py-0.5 rounded-md">
+                        SRV-X1
+                    </div>
                 </div>
 
-                {/* Details */}
-                <div className="p-5">
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                        <h3 className="text-xs font-black text-white uppercase tracking-tight leading-snug truncate italic" title={video.original_filename}>
-                            {video.original_filename}
-                        </h3>
-                        <button className="p-1 hover:bg-white/10 rounded-sm transition-colors shrink-0">
+                {/* Details Container */}
+                <div className="p-8 flex-1 flex flex-col">
+                    <div className="flex items-start justify-between gap-4 mb-4">
+                        <div className="min-w-0">
+                            <h3 className="text-[13px] font-black text-white uppercase tracking-tight leading-tight italic group-hover:text-primary transition-colors duration-500 line-clamp-2" title={video.original_filename}>
+                                {video.original_filename}
+                            </h3>
+                        </div>
+                        <button className="w-8 h-8 flex items-center justify-center hover:bg-white/5 rounded-lg border border-transparent hover:border-white/10 transition-all shrink-0">
                             <MoreVertical className="w-4 h-4 text-text-secondary" />
                         </button>
                     </div>
 
-                    <div className="flex items-center gap-4 text-[9px] font-bold text-text-secondary uppercase tracking-widest mb-4">
-                        <span>{new Date(video.created_at).toLocaleDateString()}</span>
-                        <span className="w-1 h-1 rounded-full bg-primary/40" />
+                    <div className="flex items-center gap-4 text-[10px] font-black text-text-secondary uppercase tracking-[0.2em] mb-auto opacity-60">
+                        <span className="flex items-center gap-1.5">
+                            <div className="w-1 h-1 rounded-full bg-primary/40" />
+                            {new Date(video.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                        </span>
+                        <div className="h-4 w-[1px] bg-white/10" />
                         <span>{(video.file_size_bytes ? video.file_size_bytes / (1024 * 1024) : 0).toFixed(1)} MB</span>
                     </div>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                    {/* Actions Rail */}
+                    <div className="flex items-center justify-between pt-6 mt-6 border-t border-white/5">
                         <button
                             onClick={handleDownload}
-                            className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest text-primary hover:text-white transition-colors"
+                            className="flex items-center gap-2.5 text-[10px] font-black uppercase tracking-[0.3em] text-primary hover:text-white transition-all transform active:scale-95 italic group/dl"
                         >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>Download</span>
+                            <div className="p-2 bg-primary/10 rounded-lg group-hover/dl:bg-primary transition-colors">
+                                <Download className="w-4 h-4 group-hover/dl:text-white" />
+                            </div>
+                            <span className="hidden sm:inline">Ingress Pool</span>
                         </button>
                         <button
                             onClick={handleDelete}
                             disabled={isDeleting}
-                            className="p-2 hover:bg-primary/10 rounded-sm text-text-secondary hover:text-primary transition-colors disabled:opacity-50"
+                            className="w-10 h-10 flex items-center justify-center bg-white/5 hover:bg-primary/10 border border-white/5 hover:border-primary/20 rounded-xl text-text-secondary hover:text-primary transition-all transform active:scale-90 disabled:opacity-50"
                         >
-                            {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            {isDeleting ? <Loader2 className="w-4.5 h-4.5 animate-spin" /> : <Trash2 className="w-4.5 h-4.5" />}
                         </button>
                     </div>
                 </div>
+
+                {/* Bottom Red Line Indicator */}
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-700 origin-center opacity-40 shadow-[0_-5px_15px_rgba(200,16,46,0.3)]" />
             </div>
             {showPlayer && (
                 <VideoPlayerModal
