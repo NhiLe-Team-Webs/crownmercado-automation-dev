@@ -1,0 +1,28 @@
+# Ignore everything in frontend
+frontend/
+
+# Ignore everything in docker except what we need
+docker/Dockerfile.frontend
+docker/Dockerfile.remotion
+docker/Dockerfile.worker
+docker/pgadmin/
+
+# Standard ignores
+node_modules
+venv
+.venv
+__pycache__
+*.pyc
+.git
+.github
+llm_context
+plans
+docs
+tests
+.env
+.opencode
+*.md
+alembic.ini
+pyproject.toml
+release-manifest.json
+requirements_dev.txt

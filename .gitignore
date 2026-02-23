@@ -173,3 +173,4 @@ temp/
 *.avi
 *.mov
 #
+src/automation/provision-lambda/.env
