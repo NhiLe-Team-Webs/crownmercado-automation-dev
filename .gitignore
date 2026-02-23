@@ -174,3 +174,8 @@ temp/
 *.mov
 #
 src/automation/provision-lambda/.env
+src/automation/provision-lambda/node_modules/
+src/automation/provision-lambda/*.zip
+src/automation/provision-lambda/dist/
+!.opencode/plans/
+
