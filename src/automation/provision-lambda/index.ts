@@ -77,23 +77,38 @@ export const handler = async (event: any) => {
     console.log(`Task started: ${taskArn}. Waiting for port allocation...`);
 
     // 3. Wait and fetch the assigned port
+    // Poll up to 20 times × 5s = 100s total (Lambda timeout: 180s)
     let assignedPort: number | undefined;
     let attempts = 0;
+    const MAX_ATTEMPTS = 20;
+    const POLL_INTERVAL_MS = 5000;
 
-    while (!assignedPort && attempts < 10) {
-      await new Promise(resolve => setTimeout(resolve, 3000));
+    while (!assignedPort && attempts < MAX_ATTEMPTS) {
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
       const taskDetail = await ecs.send(new DescribeTasksCommand({
         cluster: CLUSTER_NAME,
         tasks: [taskArn]
       }));
 
-      const container = taskDetail.tasks?.[0]?.containers?.[0];
+      const task = taskDetail.tasks?.[0];
+      const container = task?.containers?.[0];
+      const taskStatus = task?.lastStatus;
+      const containerStatus = container?.lastStatus;
+
+      console.log(`[Poll ${attempts + 1}/${MAX_ATTEMPTS}] Task: ${taskStatus}, Container: ${containerStatus}, Bindings: ${JSON.stringify(container?.networkBindings)}`);
+
       assignedPort = container?.networkBindings?.[0]?.hostPort;
       attempts++;
+
+      // Exit early if task failed
+      if (taskStatus === 'STOPPED') {
+        const reason = task?.stoppedReason || 'Unknown reason';
+        throw new Error(`ECS Task stopped unexpectedly: ${reason}`);
+      }
     }
 
     if (!assignedPort) {
-      throw new Error("Port allocation timeout - ECS did not provide a hostPort binding in time.");
+      throw new Error(`Port allocation timeout after ${MAX_ATTEMPTS * POLL_INTERVAL_MS / 1000}s - ECS did not provide a hostPort binding.`);
     }
 
     console.log(`Successfully provisioned. Assigned Host Port: ${assignedPort}`);
@@ -139,7 +154,12 @@ export const handler = async (event: any) => {
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "POST,OPTIONS"
+      },
       body: JSON.stringify({
         message: "Instance provisioned successfully",
         tenantId,
@@ -153,7 +173,12 @@ export const handler = async (event: any) => {
     console.error("Provisioning Error:", error);
     return {
       statusCode: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Methods": "POST,OPTIONS"
+      },
       body: JSON.stringify({ error: "Provisioning failed", details: error.message })
     };
   }

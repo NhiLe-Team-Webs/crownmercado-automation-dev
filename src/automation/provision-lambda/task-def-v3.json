@@ -1,0 +1,35 @@
+{
+    "family": "crownmercado-poc-task",
+    "networkMode": "bridge",
+    "requiresCompatibilities": [
+        "EC2"
+    ],
+    "containerDefinitions": [
+        {
+            "name": "crownmercado-poc-container",
+            "image": "223776318322.dkr.ecr.ap-southeast-2.amazonaws.com/crownmercado-poc:latest",
+            "cpu": 256,
+            "memory": 512,
+            "portMappings": [
+                {
+                    "containerPort": 8000,
+                    "hostPort": 0,
+                    "protocol": "tcp"
+                }
+            ],
+            "essential": true,
+            "environment": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/crownmercado-poc",
+                    "awslogs-region": "ap-southeast-2",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            },
+            "mountPoints": [],
+            "volumesFrom": [],
+            "systemControls": []
+        }
+    ]
+}
