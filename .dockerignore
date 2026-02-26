@@ -22,7 +22,7 @@ tests
 .env
 .opencode
 *.md
-alembic.ini
+# alembic.ini
 pyproject.toml
 release-manifest.json
 requirements_dev.txt
