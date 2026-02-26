@@ -65,7 +65,7 @@ export const handler = async (event: any) => {
             { name: "USER_ID", value: tenantId },
             { name: "COMPANY_NAME", value: company_name },
             { name: "DB_NAME", value: dbName },
-            { name: "DATABASE_URL", value: `postgresql://admin:admin_pass_123@${EC2_PUBLIC_IP}:5432/${dbName}` }
+            { name: "DATABASE_URL", value: `postgresql+asyncpg://admin:admin_pass_123@${EC2_PUBLIC_IP}:5432/${dbName}` }
           ]
         }]
       }
