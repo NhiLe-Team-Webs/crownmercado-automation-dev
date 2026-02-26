@@ -65,14 +65,18 @@ export const handler = async (event: any) => {
             { name: "USER_ID", value: tenantId },
             { name: "COMPANY_NAME", value: company_name },
             { name: "DB_NAME", value: dbName },
-            { name: "DATABASE_URL", value: `postgresql+asyncpg://admin:admin_pass_123@${EC2_PUBLIC_IP}:5432/${dbName}` }
+            { name: "DATABASE_URL", value: `postgresql+asyncpg://admin:admin_pass_123@172.17.0.1:5432/${dbName}` }
           ]
         }]
       }
     }));
 
     const taskArn = ecsResponse.tasks?.[0]?.taskArn;
-    if (!taskArn) throw new Error("Failed to start ECS Task - No ARN returned");
+    if (!taskArn) {
+      console.error("ECS RunTask Failures:", JSON.stringify(ecsResponse.failures, null, 2));
+      const reason = ecsResponse.failures?.[0]?.reason || "No ARN returned";
+      throw new Error(`Failed to start ECS Task - ${reason}`);
+    }
 
     console.log(`Task started: ${taskArn}. Waiting for port allocation...`);
 

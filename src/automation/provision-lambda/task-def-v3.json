@@ -8,8 +8,8 @@
         {
             "name": "crownmercado-poc-container",
             "image": "223776318322.dkr.ecr.ap-southeast-2.amazonaws.com/crownmercado-poc:latest",
-            "cpu": 256,
-            "memory": 512,
+            "cpu": 128,
+            "memory": 200,
             "portMappings": [
                 {
                     "containerPort": 8000,
