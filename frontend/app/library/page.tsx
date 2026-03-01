@@ -2,10 +2,9 @@
 
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, Video } from '@/lib/api';
 import VideoRow from '@/components/VideoRow';
 import Shell, { useSearch } from '@/components/Shell';
-import { FileVideo, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LibraryPage() {
@@ -23,68 +22,44 @@ function LibraryContent() {
         queryFn: api.listVideos,
     });
 
-    const filteredVideos = videos?.filter((v: any) =>
+    const filteredVideos = videos?.filter((v: Video) =>
         v.original_filename.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
     return (
-        <div className="p-8 max-w-[1600px] mx-auto min-h-[calc(100vh-64px)]">
+        <div className="flex flex-col gap-8 animate-in fade-in duration-500">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Channel Content</h2>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Manage and monitor your processed videos</p>
+                </div>
+                <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-full shadow-inner">
+                    <button className="px-6 py-1.5 rounded-full text-xs font-bold bg-white dark:bg-white/10 text-black dark:text-white shadow-sm">All</button>
+                    <button className="px-6 py-1.5 rounded-full text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">Completed</button>
+                </div>
+            </div>
+
             {isLoading ? (
-                <div className="h-[60vh] flex flex-col items-center justify-center gap-6">
-                    <Loader2 className="w-12 h-12 text-primary animate-spin" />
-                    <p className="text-sm font-bold text-text-secondary uppercase tracking-widest">Loading assets...</p>
+                <div className="py-32 flex flex-col items-center justify-center gap-6">
+                    <span className="material-symbols-outlined text-[48px] text-[var(--color-primary)] animate-spin">sync</span>
+                    <p className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest">Loading assets...</p>
+                </div>
+            ) : filteredVideos.length > 0 ? (
+                <div id="videoGrid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredVideos.map((video: Video) => (
+                        <VideoRow key={video.id} video={video} />
+                    ))}
                 </div>
             ) : (
-                <div className="animate-in fade-in duration-500">
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-2xl font-bold text-white">Channel content</h2>
+                <div id="emptyState" className="py-32 flex flex-col items-center justify-center text-center bg-white dark:bg-[#111] rounded-3xl border border-gray-100 dark:border-white/10 shadow-sm">
+                    <div className="w-20 h-20 bg-gray-50 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
+                        <span className="material-symbols-outlined text-4xl text-gray-300 dark:text-gray-600">video_library</span>
                     </div>
-
-                    <div className="bg-[#1C1C1C] rounded-xl border border-[#333333] overflow-hidden shadow-2xl">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-[#333333] text-[11px] font-bold text-text-secondary uppercase tracking-wider bg-black/10">
-                                    <th className="p-4">Video</th>
-                                    <th className="p-4">Status</th>
-                                    <th className="p-4 text-center">Date</th>
-                                    <th className="p-4 text-right pr-8">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[#333333]">
-                                {filteredVideos.length > 0 ? (
-                                    filteredVideos.map((video: any) => (
-                                        <VideoRow key={video.id} video={video} />
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={4} className="p-32 text-center">
-                                            <div className="flex flex-col items-center gap-4 opacity-40">
-                                                <FileVideo size={48} className="text-text-secondary" />
-                                                <p className="text-sm font-bold uppercase tracking-widest text-text-secondary">No assets found matching your deployment search</p>
-                                                <Link href="/upload" className="text-primary hover:underline text-xs font-black uppercase tracking-widest">Initialize New Deployment</Link>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Pagination Mock */}
-                    <div className="flex items-center justify-between mt-6 px-2">
-                        <div className="text-xs text-text-secondary font-medium">
-                            Showing {filteredVideos.length} of {videos?.length || 0} entries
-                        </div>
-                        <div className="flex gap-1">
-                            <button className="p-2 border border-[#333333] rounded-lg text-text-secondary opacity-30 cursor-not-allowed">
-                                <ChevronLeft size={16} />
-                            </button>
-                            <button className="px-3.5 py-1.5 border border-primary/20 bg-primary/10 rounded-lg text-primary text-xs font-bold">1</button>
-                            <button className="p-2 border border-[#333333] rounded-lg text-text-secondary hover:bg-white/5 transition-colors">
-                                <ChevronRight size={16} />
-                            </button>
-                        </div>
-                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">No videos found</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6">Start your first project to see it here.</p>
+                    <Link href="/" className="px-6 py-2 bg-[var(--color-primary)] text-white font-bold rounded-full shadow-lg shadow-red-500/20 hover:scale-[1.02] active:scale-95 transition-all">
+                        Create Now
+                    </Link>
                 </div>
             )}
         </div>
