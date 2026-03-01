@@ -1,5 +1,5 @@
-# Ignore everything in frontend
-frontend/
+# Ignore everything in frontend (Commented out to allow frontend build)
+# frontend/
 
 # Ignore everything in docker except what we need
 docker/Dockerfile.frontend
