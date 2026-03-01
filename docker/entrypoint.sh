@@ -1,11 +1,11 @@
 #!/bin/bash
 set -e
 
-# Sử dụng IP Gateway của Docker (172.17.0.1) để gọi Host từ Container
-DB_NAME_TO_CREATE=$DB_NAME
-PG_HOST="172.17.0.1"
-PG_USER="admin"
-export PGPASSWORD="admin_pass_123"
+# Sử dụng biến môi trường được truyền vào từ docker-compose
+DB_NAME_TO_CREATE=${POSTGRES_DB:-crownmercado_automation_dev}
+PG_HOST=${POSTGRES_HOST:-postgres}
+PG_USER=${POSTGRES_USER:-postgres}
+export PGPASSWORD=${POSTGRES_PASSWORD:-password}
 
 echo "Checking if database $DB_NAME_TO_CREATE exists at $PG_HOST..."
 RETRIES=10
