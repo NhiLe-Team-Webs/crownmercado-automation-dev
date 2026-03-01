@@ -129,8 +129,7 @@ export default function VideoCard({ video }: Props) {
             </div>
             {showPlayer && (
                 <VideoPlayerModal
-                    videoId={video.id}
-                    filename={video.original_filename}
+                    video={video}
                     onClose={() => setShowPlayer(false)}
                 />
             )}

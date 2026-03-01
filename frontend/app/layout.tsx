@@ -1,23 +1,17 @@
 import type { Metadata } from "next";
-import { Montserrat, Open_Sans } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/providers";
 
-const montserrat = Montserrat({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-montserrat",
-  weight: ["600", "700", "800"], // Bold for headlines
-});
-
-const openSans = Open_Sans({
-  subsets: ["latin"],
-  variable: "--font-open-sans",
-  weight: ["400", "500", "600"], // Clean for body
+  variable: "--font-inter",
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "One Click Video - Crown Mercado Studio",
-  description: "Creating Brand Preference through AI video solutions",
+  title: "Video Editor Pro | Studio",
+  description: "Manage and monitor your processed videos",
 };
 
 export default function RootLayout({
@@ -26,8 +20,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${montserrat.variable} ${openSans.variable}`}>
-      <body className="antialiased min-h-screen bg-[#F9F9F9] font-sans">
+    <html lang="en" className={inter.variable}>
+      <head>
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="antialiased min-h-screen font-sans">
         <Providers>
           {children}
         </Providers>
