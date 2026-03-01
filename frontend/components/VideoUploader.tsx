@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { api } from '@/lib/api';
+import { Upload, AlertCircle, Sparkles, Download, CheckCircle, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
 
 const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB parts
 
@@ -11,21 +13,21 @@ interface VideoUploaderProps {
     onClose?: () => void;
 }
 
-import { Upload, X, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
-import Link from 'next/link';
-
 export default function VideoUploader({ onUploadComplete, onClose }: VideoUploaderProps) {
     const [file, setFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
-    const [status, setStatus] = useState<string>('Select files to upload');
+    const [status, setStatus] = useState<string>('UPLOADING');
     const [error, setError] = useState<string | null>(null);
+    const [completedVideoId, setCompletedVideoId] = useState<string | null>(null);
+    const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+    const [isDragOver, setIsDragOver] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
 
     const getFileFingerprint = (f: File) => `upload_${f.name}_${f.size}_${f.lastModified}`;
 
-    // Prevent accidental tab closure
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
             if (uploading) {
@@ -37,42 +39,42 @@ export default function VideoUploader({ onUploadComplete, onClose }: VideoUpload
         return () => window.removeEventListener('beforeunload', handleBeforeUnload);
     }, [uploading]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement> | { target: { files: FileList | null } }) => {
         if (e.target.files && e.target.files[0]) {
             const selectedFile = e.target.files[0];
+            if (selectedFile.size > 2 * 1024 * 1024 * 1024) {
+                setError("File too large. Maximum size is 2GB");
+                return;
+            }
             setFile(selectedFile);
             setError(null);
             setProgress(0);
-            setStatus('Ready to ingest');
-            // Auto-trigger upload if we have a file
-            setTimeout(() => startUpload(selectedFile), 100);
+            setStatus('UPLOADING');
+            setCompletedVideoId(null);
+            setDownloadUrl(null);
         }
     };
 
     const cancelUpload = () => {
         if (abortControllerRef.current) {
             abortControllerRef.current.abort();
-            setStatus('Aborting pipeline...');
+            setStatus('CANCELED');
             setUploading(false);
-            setError('Ingress terminated by operator.');
-
-            // Clear resumable state on explicit cancel
             if (file) {
                 localStorage.removeItem(getFileFingerprint(file));
             }
         }
     };
 
-    const startUpload = async (fileToUpload: File) => {
-        if (!fileToUpload) return;
-        const fingerprint = getFileFingerprint(fileToUpload);
+    const startUpload = async () => {
+        if (!file) return;
+        const fingerprint = getFileFingerprint(file);
 
         try {
             setUploading(true);
             setError(null);
             abortControllerRef.current = new AbortController();
 
-            // Check for resumable state
             const storedState = localStorage.getItem(fingerprint);
             let upload_id: string;
             let video_id: string;
@@ -83,31 +85,30 @@ export default function VideoUploader({ onUploadComplete, onClose }: VideoUpload
                 upload_id = state.upload_id;
                 video_id = state.video_id;
                 uploadedParts = state.uploadedParts || [];
-                setStatus('Resuming previous pipeline...');
+                setStatus('RESUMING');
             } else {
-                setStatus('Initiating pipeline...');
-                const result = await api.initiateUpload(fileToUpload.name, fileToUpload.type);
+                setStatus('UPLOADING');
+                const result = await api.initiateUpload(file.name, file.type);
                 upload_id = result.upload_id;
                 video_id = result.video_id;
             }
 
-            const totalParts = Math.ceil(fileToUpload.size / CHUNK_SIZE);
+            const totalParts = Math.ceil(file.size / CHUNK_SIZE);
             const uploadedPartNumbers = new Set(uploadedParts.map(p => p.PartNumber));
 
             for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
                 if (abortControllerRef.current.signal.aborted) return;
 
-                // Skip if already uploaded
                 if (uploadedPartNumbers.has(partNumber)) {
                     setProgress(Math.round((partNumber / totalParts) * 100));
                     continue;
                 }
 
                 const start = (partNumber - 1) * CHUNK_SIZE;
-                const end = Math.min(start + CHUNK_SIZE, fileToUpload.size);
-                const chunk = fileToUpload.slice(start, end);
+                const end = Math.min(start + CHUNK_SIZE, file.size);
+                const chunk = file.slice(start, end);
 
-                setStatus(`Syncing segment ${partNumber}/${totalParts}`);
+                setStatus('UPLOADING');
                 const { url } = await api.getPresignedUrl(video_id, upload_id, partNumber);
                 const etag = await api.uploadChunk(url, chunk);
                 if (!etag) throw new Error(`Transmission failed for segment ${partNumber}: ETag missing`);
@@ -115,24 +116,29 @@ export default function VideoUploader({ onUploadComplete, onClose }: VideoUpload
                 uploadedParts.push({ PartNumber: partNumber, ETag: etag.replace(/"/g, '') });
                 uploadedPartNumbers.add(partNumber);
 
-                // Save progress to localStorage
-                localStorage.setItem(fingerprint, JSON.stringify({
-                    upload_id,
-                    video_id,
-                    uploadedParts
-                }));
-
+                localStorage.setItem(fingerprint, JSON.stringify({ upload_id, video_id, uploadedParts }));
                 setProgress(Math.round((partNumber / totalParts) * 100));
             }
 
-            setStatus('Finalizing deployment...');
+            setStatus('PROCESSING');
             await api.completeUpload(video_id, upload_id, uploadedParts);
 
-            // Clear storage on success
+            // Note: Since this refactor relies purely on chunked upload success without SSE, 
+            // we simulate a backend completion here for the upload stage.
             localStorage.removeItem(fingerprint);
 
+            // Get download URL immediately
+            try {
+                const { url: dUrl } = await api.getVideoDownloadUrl(video_id, 'attachment');
+                setDownloadUrl(dUrl);
+            } catch (e) {
+                // If it's not ready yet
+            }
+
             setUploading(false);
+            setCompletedVideoId(video_id);
             onUploadComplete(video_id);
+
         } catch (err: any) {
             if (err.name === 'AbortError') return;
             setError(err.message || 'Transmission failed');
@@ -142,99 +148,142 @@ export default function VideoUploader({ onUploadComplete, onClose }: VideoUpload
         }
     };
 
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        if (!uploading) setIsDragOver(true);
+    };
+    const handleDragLeave = () => setIsDragOver(false);
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        if (uploading) return;
+        if (e.dataTransfer.files.length) {
+            handleFileChange({ target: { files: e.dataTransfer.files } });
+        }
+    };
+
+    const formatFileSize = (bytes: number) => {
+        if (bytes >= 1024 * 1024 * 1024) return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    };
+
     return (
-        <div className="bg-[#1C1C1C] w-full max-w-3xl mx-auto rounded-2xl border border-[#333333] shadow-2xl overflow-hidden flex flex-col h-[600px] animate-in fade-in zoom-in duration-300 relative">
-            {onClose && (
-                <button
-                    onClick={onClose}
-                    className="absolute top-6 right-6 p-2 text-text-secondary hover:text-white transition-colors z-50"
-                >
-                    <X size={24} />
-                </button>
-            )}
-            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
-                {!uploading && !error && progress < 100 && (
-                    <div className="animate-in fade-in duration-500 w-full">
-                        <div
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-32 h-32 rounded-full bg-black/30 flex items-center justify-center mb-8 mx-auto cursor-pointer hover:bg-black/50 transition-all border border-dashed border-white/10 hover:border-primary group"
-                        >
-                            <Upload size={48} className="text-text-secondary group-hover:text-primary transition-colors" />
-                        </div>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            onChange={handleFileChange}
-                            accept="video/*"
-                        />
-                        <h4 className="text-xl font-medium text-white mb-2">Drag and drop video files to upload</h4>
+        <div className="w-full max-w-[800px] flex flex-col items-center gap-6">
+            <div
+                className={`relative w-full rounded-2xl overflow-hidden bg-[#F1F1F1] border border-gray-200 transition-all duration-300 ${isDragOver ? 'ring-2 ring-blue-500 bg-blue-50' : ''} ${file && !uploading && !completedVideoId ? 'ring-2 ring-blue-500' : ''}`}
+                style={{ aspectRatio: '16/9' }}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+            >
+                {/* Select File Layer */}
+                <div className={`absolute inset-0 flex flex-col items-center justify-center text-gray-700 bg-[#F9F9F9] z-10 transition-opacity duration-300 ${file ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+                    <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-sm border border-gray-100 cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+                        <Upload className="w-10 h-10 text-gray-400" />
+                    </div>
+                    <p className="text-xl font-medium text-gray-900">Select file to upload</p>
+                    <p className="text-sm text-gray-500 mt-2">Supported: MP4, MOV, AVI, MKV (max 2GB)</p>
+                    <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="mt-8 px-8 py-2.5 bg-[#065FD4] text-white font-bold rounded-full uppercase tracking-wide text-xs shadow-md active:scale-95 transition-all"
+                    >
+                        Select File
+                    </button>
+                    <input type="file" ref={fileInputRef} accept="video/*" className="hidden" onChange={handleFileChange} />
+                </div>
 
-                        <button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="px-8 py-2.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-lg transition-all active:scale-95 shadow-lg shadow-primary/20"
-                        >
-                            SELECT FILES
+                {/* Preview Video */}
+                {file && (
+                    <video
+                        src={URL.createObjectURL(file)}
+                        playsInline
+                        controls
+                        className={`w-full h-full object-contain bg-black ${completedVideoId ? 'block' : 'hidden'}`}
+                    />
+                )}
+
+                {/* Progress Overlay */}
+                <div className={`absolute inset-0 z-40 bg-white/95 flex flex-col items-center justify-center transition-opacity duration-500 ${uploading ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                    <div className="w-80 flex flex-col gap-6 text-center">
+                        <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1">{progress}%</p>
+                            <h3 className="text-lg font-bold text-gray-900">{status}...</h3>
+                        </div>
+                        <button onClick={cancelUpload} className="text-sm text-gray-500 hover:text-red-600 underline transition-colors">
+                            Cancel Processing
                         </button>
                     </div>
-                )}
+                </div>
 
-                {uploading && (
-                    <div className="w-full max-w-md animate-in fade-in duration-300">
-                        <div className="w-24 h-24 rounded-full border-4 border-primary/20 border-t-primary animate-spin mb-8 mx-auto" />
-                        <h4 className="text-2xl font-bold text-white mb-4">Ingesting bytes...</h4>
-                        <p className="text-sm text-text-secondary uppercase tracking-[0.2em] font-black mb-8">{status}</p>
+                {/* Error Overlay */}
+                <div className={`absolute inset-0 z-50 bg-white/95 flex flex-col items-center justify-center transition-opacity duration-500 ${error ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                    <div className="w-80 flex flex-col gap-4 text-center">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                            <AlertCircle className="text-red-600 w-8 h-8" />
+                        </div>
+                        <h3 className="text-lg font-bold text-gray-900">Something went wrong</h3>
+                        <p className="text-sm text-gray-500">{error}</p>
                         <button
-                            onClick={cancelUpload}
-                            className="px-6 py-2 border border-primary/40 text-primary text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-primary/10 transition-all"
+                            onClick={() => setError(null)}
+                            className="h-11 bg-black text-white font-bold rounded-full hover:bg-gray-800 transition-all px-8"
                         >
-                            Cancel Ingress
+                            Try Again
                         </button>
                     </div>
-                )}
-
-                {!uploading && progress === 100 && (
-                    <div className="animate-in zoom-in duration-500">
-                        <div className="w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center mb-8 mx-auto">
-                            <CheckCircle2 size={56} className="text-green-500" />
-                        </div>
-                        <h4 className="text-2xl font-bold text-white mb-2">Upload Complete</h4>
-                        <p className="text-sm text-text-secondary mb-8">Your video has been successfully added to the vault.</p>
-                        <Link href="/library" className="text-primary font-bold hover:underline uppercase tracking-widest text-sm">Return to Library</Link>
-                    </div>
-                )}
-
-                {error && (
-                    <div className="animate-in shake duration-500">
-                        <div className="w-24 h-24 rounded-full bg-red-500/20 flex items-center justify-center mb-8 mx-auto">
-                            <AlertCircle size={56} className="text-red-500" />
-                        </div>
-                        <h4 className="text-2xl font-bold text-white mb-2">Deployment Failed</h4>
-                        <p className="text-sm text-red-400 mb-8 max-w-md">{error}</p>
-                        <button onClick={() => {
-                            setError(null);
-                            setProgress(0);
-                            setFile(null);
-                        }} className="text-white bg-white/10 px-6 py-2 rounded-lg font-bold hover:bg-white/20 transition-all uppercase text-xs tracking-widest">Restart Pipeline</button>
-                    </div>
-                )}
+                </div>
             </div>
 
-            {/* Progress Bar Footer */}
-            {(uploading || (progress > 0 && progress < 100)) && (
-                <div className="px-12 py-8 bg-black/40 border-t border-[#333333]">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                            <Loader2 size={16} className="text-primary animate-spin" />
-                            <span className="text-xs font-bold text-text-secondary uppercase tracking-widest">TRANSMISSION: {progress}%</span>
-                        </div>
-                        <span className="text-xs font-black text-white italic">{(file?.size ? (file.size * progress / 100 / (1024 * 1024)).toFixed(1) : 0)} MB / {(file?.size ? (file.size / (1024 * 1024)).toFixed(1) : 0)} MB</span>
+            {/* Action Area */}
+            {file && !completedVideoId && !uploading && !error && (
+                <div className="flex flex-col items-center gap-4 animate-in fade-in zoom-in duration-300">
+                    <button
+                        onClick={startUpload}
+                        className="px-12 h-14 bg-black text-white font-bold rounded-full shadow-2xl hover:bg-gray-800 active:scale-[0.98] transition-all flex items-center justify-center gap-3 tracking-wider"
+                    >
+                        <Sparkles className="w-6 h-6" />
+                        <span>START PROCESSING</span>
+                    </button>
+
+                    <div className="flex items-center gap-2 px-4 py-1.5 bg-gray-100 rounded-full border border-gray-200 text-gray-500">
+                        <span className="text-[11px] font-bold truncate max-w-[150px] text-gray-900">{file.name}</span>
+                        <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                        <span className="text-[11px] font-bold">{formatFileSize(file.size)}</span>
+                        <button onClick={() => fileInputRef.current?.click()} className="ml-1 text-gray-400 hover:text-blue-600 transition-colors">
+                            <RefreshCw className="w-4 h-4" />
+                        </button>
                     </div>
-                    <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-primary shadow-[0_0_10px_#C8102E] transition-all duration-300"
-                            style={{ width: `${progress}%` }}
-                        />
+                </div>
+            )}
+
+            {/* Success Actions */}
+            {completedVideoId && (
+                <div className="flex flex-col items-center gap-4 animate-in slide-in-from-bottom-2 duration-500">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => {
+                                if (downloadUrl) window.location.assign(downloadUrl);
+                            }}
+                            className="h-11 px-8 bg-[#065FD4] text-white font-bold text-sm rounded-full shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 uppercase tracking-wider"
+                        >
+                            <Download className="w-5 h-5" /> Download Video
+                        </button>
+                        <button
+                            onClick={() => {
+                                setFile(null);
+                                setCompletedVideoId(null);
+                                setProgress(0);
+                            }}
+                            className="h-11 px-6 border border-gray-300 text-gray-700 font-bold text-sm rounded-full hover:bg-gray-100 uppercase tracking-wider transition-all"
+                        >
+                            Try Another
+                        </button>
+                    </div>
+                    <div className="flex items-center gap-2 py-1.5 px-4 bg-green-50 text-green-700 rounded-full border border-green-100">
+                        <CheckCircle className="w-4 h-4" />
+                        <span className="text-xs font-bold">{file?.name}</span>
                     </div>
                 </div>
             )}
