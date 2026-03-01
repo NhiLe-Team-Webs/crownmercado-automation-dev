@@ -22,9 +22,6 @@ COPY . .
 # Thiết lập port ứng dụng của bạn (ví dụ 8000)
 EXPOSE 8000
 
-# Lệnh chạy ứng dụng (Thay đổi tùy vào app của bạn, vd FastAPI hay Flask/Django)
-# Ví dụ cho FastAPI (uvicorn)
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-# Ví dụ cho script thông thường:
-# CMD ["python", "main.py"]
+# Lệnh chạy ứng dụng FastAPI, chỉ ra đúng đường dẫn module src.api.main:app.
+# Đặt port 3000 để khớp với cấu hình "Port: 3000" của Kubernetes.
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "3000"]
