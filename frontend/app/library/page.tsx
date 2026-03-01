@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, Video } from '@/lib/api';
 import VideoRow from '@/components/VideoRow';
 import Shell, { useSearch } from '@/components/Shell';
 import { FileVideo, Loader2 } from 'lucide-react';
@@ -23,7 +23,7 @@ function LibraryContent() {
         queryFn: api.listVideos,
     });
 
-    const filteredVideos = videos?.filter((v: any) =>
+    const filteredVideos = videos?.filter((v: Video) =>
         v.original_filename.toLowerCase().includes(searchQuery.toLowerCase())
     ) || [];
 
@@ -47,7 +47,7 @@ function LibraryContent() {
                 </div>
             ) : filteredVideos.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {filteredVideos.map((video: any) => (
+                    {filteredVideos.map((video: Video) => (
                         <VideoRow key={video.id} video={video} />
                     ))}
                 </div>

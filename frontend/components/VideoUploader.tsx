@@ -78,7 +78,7 @@ export default function VideoUploader({ onUploadComplete, onClose }: VideoUpload
             const storedState = localStorage.getItem(fingerprint);
             let upload_id: string;
             let video_id: string;
-            let uploadedParts: any[] = [];
+            let uploadedParts: { PartNumber: number, ETag: string }[] = [];
 
             if (storedState) {
                 const state = JSON.parse(storedState);
@@ -139,9 +139,9 @@ export default function VideoUploader({ onUploadComplete, onClose }: VideoUpload
             setCompletedVideoId(video_id);
             onUploadComplete(video_id);
 
-        } catch (err: any) {
-            if (err.name === 'AbortError') return;
-            setError(err.message || 'Transmission failed');
+        } catch (err: unknown) {
+            if (err instanceof Error && err.name === 'AbortError') return;
+            setError(err instanceof Error ? err.message : 'Transmission failed');
             setUploading(false);
         } finally {
             abortControllerRef.current = null;
