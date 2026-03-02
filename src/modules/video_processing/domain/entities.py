@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID, uuid4
 from pydantic import BaseModel, Field
-from .value_objects import JobStatus, Transcript, RenderConfig
+from src.modules.video_processing.domain.value_objects import JobStatus, Transcript, RenderConfig
 
 class VideoJob(BaseModel):
     id: UUID = Field(default_factory=uuid4)

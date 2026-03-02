@@ -1,4 +1,4 @@
-from .value_objects import TimestampRange
+from src.modules.video_processing.domain.value_objects import TimestampRange
 
 class SilenceRule:
     """Domain Service: Quy tắc detect silence (>1.5s lặng -> cắt)"""

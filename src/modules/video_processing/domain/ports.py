@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from uuid import UUID
-from .entities import VideoJob
-from .value_objects import Transcript
+from src.modules.video_processing.domain.entities import VideoJob
+from src.modules.video_processing.domain.value_objects import Transcript
+
 
 class IVideoRepository(ABC):
     @abstractmethod
@@ -55,4 +56,10 @@ class IStoragePort(ABC):
     @abstractmethod
     async def delete_file(self, remote_path: str) -> None:
         """Xóa file khỏi storage"""
+        pass
+
+class IVideoEditorPort(ABC):
+    @abstractmethod
+    async def remove_silence(self, input_path: str, output_path: str) -> str:
+        """Cắt bỏ đoạn im lặng và trả về path của file đã cắt"""
         pass

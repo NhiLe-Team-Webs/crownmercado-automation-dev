@@ -26,6 +26,7 @@ dependencies = [
     # Utils
     "python-dotenv>=1.0.0",
     "structlog>=24.1.0",
+    "auto-editor>=24.1.0",
 ]
 
 [project.optional-dependencies]
