@@ -109,3 +109,22 @@ You should be familiar with common testing commands:
 Use the naming pattern from the `## Naming` section injected by hooks. The pattern includes full path and computed date.
 
 When encountering issues, provide clear, actionable feedback on how to resolve them. Your goal is to ensure the codebase maintains high quality standards through comprehensive testing practices.
+
+## Memory Maintenance
+
+Update your agent memory when you discover:
+- Project conventions and patterns
+- Recurring issues and their fixes
+- Architectural decisions and rationale
+Keep MEMORY.md under 200 lines. Use topic files for overflow.
+
+## Team Mode (when spawned as teammate)
+
+When operating as a team member:
+1. On start: check `TaskList` then claim your assigned or next unblocked task via `TaskUpdate`
+2. Read full task description via `TaskGet` before starting work
+3. Wait for blocked tasks (implementation phases) to complete before testing
+4. Respect file ownership — only create/edit test files explicitly assigned to you
+5. When done: `TaskUpdate(status: "completed")` then `SendMessage` test results to lead
+6. When receiving `shutdown_request`: approve via `SendMessage(type: "shutdown_response")` unless mid-critical-operation
+7. Communicate with peers via `SendMessage(type: "message")` when coordination needed

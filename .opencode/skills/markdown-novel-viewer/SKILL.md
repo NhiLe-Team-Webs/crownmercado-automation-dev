@@ -1,6 +1,7 @@
 ---
-name: markdown-novel-viewer
+name: ck:markdown-novel-viewer
 description: View markdown files with calm, book-like reading experience via HTTP server. Use for long-form content, documentation preview, novel reading, report viewing, distraction-free reading.
+argument-hint: "[file-or-directory]"
 ---
 
 # markdown-novel-viewer
@@ -55,7 +56,7 @@ node .opencode/skills/markdown-novel-viewer/scripts/server.cjs --stop
 
 ## Slash Command
 
-Use `/preview` for quick access:
+Use `/ck:preview` for quick access:
 
 ```bash
 /preview plans/my-plan/plan.md    # View markdown file
