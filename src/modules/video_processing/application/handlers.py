@@ -1,3 +1,4 @@
+import os
 from uuid import UUID
 from typing import Optional
 import structlog
