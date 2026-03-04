@@ -26,9 +26,11 @@ class Transcript(BaseModel):
 # ── Text Overlay Value Objects ───────────────────────────────────────────────
 
 class TextOverlayMode(str, Enum):
-    """Side panel bên cạnh speaker vs callout đè lên video"""
+    """Phân loại hiển thị"""
     SIDE_PANEL = "SIDE_PANEL"
     CINEMATIC_CALLOUT = "CINEMATIC_CALLOUT"
+    BOTTOM_TITLE = "BOTTOM_TITLE"
+    B_ROLL_VIDEO = "B_ROLL_VIDEO"
 
 
 class TextOverlayPosition(str, Enum):
@@ -46,13 +48,16 @@ class TextOverlay(BaseModel):
     mode: TextOverlayMode
     position: TextOverlayPosition = TextOverlayPosition.BOTTOM_LEFT
     reason: Optional[str] = Field(None, description="Lý do LLM chọn moment này")
+    search_query: Optional[str] = Field(None, description="Từ khoá tìm kiếm video B-Roll tiếng Anh (chỉ dùng cho mode B_ROLL_VIDEO)")
+    highlight_word: Optional[str] = Field(None, description="Từ trọng tâm để gắn underline (chỉ dùng cho mode B_ROLL_VIDEO)")
+    url: Optional[str] = Field(None, description="URL video B-Roll thực tế từ Pexels (Được gán sau)")
 
     @field_validator("text")
     @classmethod
     def text_not_empty(cls, v: str) -> str:
         if not v.strip():
             raise ValueError("text không được rỗng")
-        return v.strip().upper()
+        return v.strip()
 
     @field_validator("end")
     @classmethod

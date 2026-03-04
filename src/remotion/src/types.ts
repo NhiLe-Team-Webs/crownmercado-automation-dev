@@ -3,7 +3,7 @@
  * Mirror với Python TextOverlay value object
  */
 
-export type TextOverlayMode = "SIDE_PANEL" | "CINEMATIC_CALLOUT";
+export type TextOverlayMode = "SIDE_PANEL" | "CINEMATIC_CALLOUT" | "BOTTOM_TITLE" | "B_ROLL_VIDEO";
 
 export type TextOverlayPosition =
   | "left"
@@ -19,6 +19,9 @@ export interface TextOverlay {
   mode: TextOverlayMode;
   position: TextOverlayPosition;
   reason?: string;
+  url?: string;
+  search_query?: string;
+  highlight_word?: string;
 }
 
 export interface VideoCompositionProps {
