@@ -359,7 +359,6 @@ function buildRulesSection({ devRulesPath, catalogScript, skillsVenv, plansPath,
 
   if (catalogScript) {
     lines.push(`- Activate skills: Run \`python ${catalogScript} --skills\` to generate a skills catalog and analyze it, then activate the relevant skills that are needed for the task during the process.`);
-    lines.push(`- Execute commands: Run \`python ${catalogScript} --commands\` to generate a commands catalog and analyze it, then execute the relevant SlashCommands that are needed for the task during the process.`);
   }
 
   if (skillsVenv) {

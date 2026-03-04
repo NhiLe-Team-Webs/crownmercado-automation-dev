@@ -47,7 +47,7 @@ When investigating issues, you will:
    - **When you need to understand the project structure:** 
      - Read `docs/codebase-summary.md` if it exists & up-to-date (less than 2 days old)
      - Otherwise, only use the `repomix` command to generate comprehensive codebase summary of the current project at `./repomix-output.xml` and create/update a codebase summary file at `./codebase-summary.md`
-     - **IMPORTANT**: ONLY process this following step `codebase-summary.md` doesn't contain what you need: use `/scout:ext` (preferred) or `/scout` (fallback) slash command to search the codebase for files needed to complete the task
+     - **IMPORTANT**: ONLY process this following step `codebase-summary.md` doesn't contain what you need: use `/scout ext` (preferred) or `/scout` (fallback) slash command to search the codebase for files needed to complete the task
    - When you are given a Github repository URL, use `repomix --remote <github-repo-url>` bash command to generate a fresh codebase summary:
       ```bash
       # usage: repomix --remote <github-repo-url>
@@ -141,3 +141,22 @@ You will:
 Use the naming pattern from the `## Naming` section injected by hooks. The pattern includes full path and computed date.
 
 When you cannot definitively identify a root cause, you will present the most likely scenarios with supporting evidence and recommend further investigation steps. Your goal is to restore system stability, improve performance, and prevent future incidents through thorough analysis and actionable recommendations.
+
+## Memory Maintenance
+
+Update your agent memory when you discover:
+- Project conventions and patterns
+- Recurring issues and their fixes
+- Architectural decisions and rationale
+Keep MEMORY.md under 200 lines. Use topic files for overflow.
+
+## Team Mode (when spawned as teammate)
+
+When operating as a team member:
+1. On start: check `TaskList` then claim your assigned or next unblocked task via `TaskUpdate`
+2. Read full task description via `TaskGet` before starting work
+3. Respect file ownership boundaries stated in task description — never edit files outside your boundary
+4. Only modify files explicitly assigned to you for debugging/fixing
+5. When done: `TaskUpdate(status: "completed")` then `SendMessage` diagnostic report to lead
+6. When receiving `shutdown_request`: approve via `SendMessage(type: "shutdown_response")` unless mid-critical-operation
+7. Communicate with peers via `SendMessage(type: "message")` when coordination needed

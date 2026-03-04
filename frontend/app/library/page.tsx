@@ -57,7 +57,7 @@ function LibraryContent() {
                     </div>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">No videos found</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 mb-6">Start your first project to see it here.</p>
-                    <Link href="/" className="px-6 py-2 bg-[var(--color-primary)] text-white font-bold rounded-full shadow-lg shadow-red-500/20 hover:scale-[1.02] active:scale-95 transition-all">
+                    <Link href="/upload" className="px-6 py-2 bg-[var(--color-primary)] text-white font-bold rounded-full shadow-lg shadow-red-500/20 hover:scale-[1.02] active:scale-95 transition-all">
                         Create Now
                     </Link>
                 </div>

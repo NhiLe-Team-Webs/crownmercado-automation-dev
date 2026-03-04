@@ -12,13 +12,13 @@
  * - Resets counter when simplifier is mentioned in conversation
  */
 
-// Crash wrapper — catches require() failures and logs them
+// Crash wrapper
 try {
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { isHookEnabled } = require('./lib/ck-config-utils.cjs');
-const { invalidateCache } = require('./lib/git-info-cache.cjs');
+  const fs = require('fs');
+  const path = require('path');
+  const os = require('os');
+  const { isHookEnabled } = require('./lib/ck-config-utils.cjs');
+  const { invalidateCache } = require('./lib/git-info-cache.cjs');
 
   // Early exit if hook disabled in config
   if (!isHookEnabled('post-edit-simplify-reminder')) {
