@@ -6,6 +6,14 @@ export interface Video {
     status: 'uploading' | 'completed' | 'failed' | 'processing';
     file_size_bytes?: number;
     created_at: string;
+    pipeline_status?: string;
+}
+
+export interface PipelineStatus {
+    video_id: string;
+    pipeline_status: string;
+    pipeline_error: string | null;
+    original_filename: string;
 }
 
 export const api = {
@@ -66,5 +74,23 @@ export const api = {
         });
         if (!res.ok) throw new Error('Failed to delete video');
         return res.json();
+    },
+
+    // ── Pipeline API ────────────────────────────────────────────────────────
+
+    async startPipeline(videoId: string) {
+        const res = await fetch(`${API_URL}/uploads/start-pipeline`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ video_id: videoId }),
+        });
+        if (!res.ok) throw new Error('Failed to start pipeline');
+        return res.json() as Promise<{ status: string; video_id: string; message: string }>;
+    },
+
+    async getPipelineStatus(videoId: string) {
+        const res = await fetch(`${API_URL}/uploads/${videoId}/pipeline-status`);
+        if (!res.ok) throw new Error('Failed to get pipeline status');
+        return res.json() as Promise<PipelineStatus>;
     },
 };
