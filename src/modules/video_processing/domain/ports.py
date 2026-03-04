@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional
 from uuid import UUID
 from .entities import VideoJob
-from .value_objects import Transcript
+from .value_objects import Transcript, TextOverlay
 
 class IVideoRepository(ABC):
     @abstractmethod
@@ -55,4 +55,16 @@ class IStoragePort(ABC):
     @abstractmethod
     async def delete_file(self, remote_path: str) -> None:
         """Xóa file khỏi storage"""
+        pass
+
+
+class IKeywordExtractorPort(ABC):
+    """Port cho LLM service extract keyword từ transcript để tạo text overlay"""
+
+    @abstractmethod
+    async def extract(self, transcript: "Transcript") -> list["TextOverlay"]:
+        """
+        Phân tích transcript và trả về danh sách TextOverlay.
+        Sử dụng word-level timestamps để sync chính xác với video.
+        """
         pass

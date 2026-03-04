@@ -6,6 +6,7 @@ from src.modules.video_processing.application.handlers import CreateVideoJobUseC
 from src.modules.video_processing.infrastructure.repositories import PostgresVideoRepository
 from src.shared.database.dependencies import DatabaseSession
 
+
 router = APIRouter(prefix="/jobs", tags=["Video Jobs"])
 
 @router.post("/", response_model=VideoJob)
