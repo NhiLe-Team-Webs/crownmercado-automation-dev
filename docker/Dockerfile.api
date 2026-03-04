@@ -16,12 +16,18 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy toàn bộ source code
 COPY . .
 
-# Cấp quyền thực thi cho entrypoint
-RUN chmod +x docker/entrypoint.sh
+# Copy entrypoint script to a temporary location, fix line endings, make executable, and move to final location
+RUN cp docker/entrypoint.sh /tmp/entrypoint.sh && \
+    sed -i 's/\r$//' /tmp/entrypoint.sh && \
+    chmod +x /tmp/entrypoint.sh && \
+    mv /tmp/entrypoint.sh /docker-entrypoint.sh
+
+# Also ensure the original file has proper line endings in case it's accessed directly
+RUN sed -i 's/\r$//' docker/entrypoint.sh && chmod +x docker/entrypoint.sh
 
 # Sử dụng Port 8000
 EXPOSE 8000
 
 # Chạy qua entrypoint để thực hiện migration trước khi startup
-ENTRYPOINT ["docker/entrypoint.sh"]
+CMD ["/docker-entrypoint.sh"]
 
