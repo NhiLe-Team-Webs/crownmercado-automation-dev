@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional
 from uuid import UUID
-from src.modules.video_processing.domain.entities import VideoJob
-from src.modules.video_processing.domain.value_objects import Transcript
-
+from .entities import VideoJob
+from .value_objects import Transcript, TextOverlay
 
 class IVideoRepository(ABC):
     @abstractmethod
@@ -58,8 +57,14 @@ class IStoragePort(ABC):
         """Xóa file khỏi storage"""
         pass
 
-class IVideoEditorPort(ABC):
+
+class IKeywordExtractorPort(ABC):
+    """Port cho LLM service extract keyword từ transcript để tạo text overlay"""
+
     @abstractmethod
-    async def remove_silence(self, input_path: str, output_path: str) -> str:
-        """Cắt bỏ đoạn im lặng và trả về path của file đã cắt"""
+    async def extract(self, transcript: "Transcript") -> list["TextOverlay"]:
+        """
+        Phân tích transcript và trả về danh sách TextOverlay.
+        Sử dụng word-level timestamps để sync chính xác với video.
+        """
         pass
