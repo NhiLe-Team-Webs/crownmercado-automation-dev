@@ -35,6 +35,18 @@ class VideoResponse(BaseModel):
     status: str
     file_size_bytes: Optional[int]
     created_at: datetime
+    pipeline_status: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+
+class StartPipelineRequest(BaseModel):
+    video_id: UUID
+
+
+class PipelineStatusResponse(BaseModel):
+    video_id: str
+    pipeline_status: str
+    pipeline_error: Optional[str] = None
+    original_filename: str

@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from uuid import uuid4, UUID
 from datetime import datetime
 from typing import List
+from celery import chain
 
 from src.shared.database.dependencies import DatabaseSession
 from ..infrastructure.repositories import VideoRepository
@@ -10,7 +11,8 @@ from ..domain.ports import CompletedPart
 from .schemas import (
     InitiateUploadRequest, InitiateUploadResponse,
     GetPresignedUrlRequest, GetPresignedUrlResponse,
-    CompleteUploadRequest, VideoResponse
+    CompleteUploadRequest, VideoResponse,
+    StartPipelineRequest, PipelineStatusResponse
 )
 
 router = APIRouter(prefix="/uploads", tags=["Video Upload"])
@@ -143,7 +145,6 @@ async def delete_video(
         await storage.delete_object(video.s3_key)
     except Exception as e:
         print(f"Failed to delete from S3: {e}")
-        # Continue to delete from DB even if S3 fails (or handle as needed)
     
     # Delete from DB
     await repo.delete(video_id)
@@ -153,6 +154,70 @@ async def delete_video(
 @router.get("/my-videos", response_model=List[VideoResponse])
 async def list_videos(db: DatabaseSession):
     repo = VideoRepository(db)
-    # user_id is None for now as auth is not implemented
     videos = await repo.get_by_user_id(user_id=None)
     return videos
+
+
+# ── Pipeline Endpoints ───────────────────────────────────────────────────────
+
+@router.post("/start-pipeline")
+async def start_pipeline(
+    request: StartPipelineRequest,
+    db: DatabaseSession,
+):
+    """
+    Trigger the full video processing pipeline as a Celery chain.
+    Chain: merge → strim → broll → remotion
+    Each step runs in worker (background), not in API process.
+    """
+    from src.worker.pipeline_tasks import (
+        merge_videos_task, strim_video_task,
+        insert_broll_task, render_remotion_task,
+        pipeline_error_handler,
+    )
+
+    repo = VideoRepository(db)
+    video = await repo.get_by_id(request.video_id)
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+
+    if video.pipeline_status not in ("idle", "failed"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"Pipeline already in progress (status: {video.pipeline_status})"
+        )
+
+    # Reset pipeline state before starting
+    await repo.update_pipeline_status(request.video_id, "merging")
+
+    # Build Celery chain — each task returns video_id to the next
+    video_id_str = str(request.video_id)
+    pipeline = chain(
+        merge_videos_task.s(video_id_str),
+        strim_video_task.s(),
+        insert_broll_task.s(),
+        render_remotion_task.s(),
+    )
+    pipeline.apply_async(link_error=pipeline_error_handler.s(video_id=video_id_str))
+
+    return {
+        "status": "started",
+        "video_id": str(request.video_id),
+        "message": "Pipeline triggered — poll /pipeline-status for progress",
+    }
+
+
+@router.get("/{video_id}/pipeline-status", response_model=PipelineStatusResponse)
+async def get_pipeline_status(
+    video_id: UUID,
+    db: DatabaseSession,
+):
+    """
+    Lightweight endpoint for frontend polling.
+    Returns current pipeline step + error info if failed.
+    """
+    repo = VideoRepository(db)
+    result = await repo.get_pipeline_status(video_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Video not found")
+    return result
