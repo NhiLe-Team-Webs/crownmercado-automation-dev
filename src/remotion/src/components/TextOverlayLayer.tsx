@@ -3,6 +3,8 @@ import { Sequence } from "remotion";
 import type { TextOverlay } from "../types";
 import { SidePanelOverlay } from "./SidePanelOverlay";
 import { CinematicCallout } from "./CinematicCallout";
+import { BottomTitle } from "./BottomTitle";
+import { BRollOverlay } from "./BRollOverlay";
 
 interface TextOverlayLayerProps {
     overlays: TextOverlay[];
@@ -35,16 +37,29 @@ export const TextOverlayLayer: React.FC<TextOverlayLayerProps> = ({
                         durationInFrames={durationInFrames}
                         layout="none"
                     >
-                        {overlay.mode === "SIDE_PANEL" ? (
+                        {overlay.mode === "SIDE_PANEL" && (
                             <SidePanelOverlay
                                 text={overlay.text}
-                                fromFrame={fromFrame}
                                 durationInFrames={durationInFrames}
                             />
-                        ) : (
+                        )}
+                        {overlay.mode === "BOTTOM_TITLE" && (
+                            <BottomTitle
+                                text={overlay.text}
+                                durationInFrames={durationInFrames}
+                            />
+                        )}
+                        {overlay.mode === "B_ROLL_VIDEO" && overlay.url && (
+                            <BRollOverlay
+                                url={overlay.url}
+                                durationInFrames={durationInFrames}
+                                text={overlay.text}
+                                highlightWord={overlay.highlight_word}
+                            />
+                        )}
+                        {overlay.mode === "CINEMATIC_CALLOUT" && (
                             <CinematicCallout
                                 text={overlay.text}
-                                fromFrame={fromFrame}
                                 durationInFrames={durationInFrames}
                                 position={overlay.position}
                             />
