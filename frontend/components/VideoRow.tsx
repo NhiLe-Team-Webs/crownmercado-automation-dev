@@ -32,6 +32,7 @@ export default function VideoRow({ video }: Props) {
     }, [video.id, video.status]);
 
     const handleDownload = async (e: React.MouseEvent) => {
+        e.preventDefault();
         e.stopPropagation();
         try {
             const { url } = await api.getVideoDownloadUrl(video.id, 'attachment');
@@ -42,12 +43,16 @@ export default function VideoRow({ video }: Props) {
     };
 
     const handleDelete = async (e: React.MouseEvent) => {
+        e.preventDefault();
         e.stopPropagation();
+        console.log('Delete clicked for video:', video.id);
         if (confirm(`Delete "${video.original_filename}"? This cannot be undone.`)) {
             try {
                 await deleteMutation.mutateAsync(video.id);
+                console.log('Delete success:', video.id);
             } catch (error) {
                 console.error('Delete failed:', error);
+                alert('Khong the xoa video, vui long kiem tra log server');
             }
         }
     };
@@ -130,11 +135,11 @@ export default function VideoRow({ video }: Props) {
                             {formatSize(video.file_size_bytes)}
                         </span>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 relative z-10">
                             {isInterrupted ? (
                                 <Link
                                     href="/upload"
-                                    onClick={(e) => e.stopPropagation()}
+                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                                     className="text-[var(--color-action)] dark:text-blue-400 hover:underline text-[11px] font-bold flex items-center gap-1 uppercase"
                                 >
                                     Resume
@@ -142,6 +147,7 @@ export default function VideoRow({ video }: Props) {
                             ) : (
                                 <button
                                     onClick={handleDownload}
+                                    type="button"
                                     className="text-[var(--color-action)] dark:text-blue-400 hover:underline text-[11px] font-bold flex items-center gap-1"
                                 >
                                     <span className="material-symbols-outlined text-[16px]">download</span> Download
@@ -151,7 +157,8 @@ export default function VideoRow({ video }: Props) {
                             <button
                                 onClick={handleDelete}
                                 disabled={isDeleting}
-                                className="text-[var(--color-error)] dark:text-red-400 hover:underline text-[11px] font-bold flex items-center gap-1 disabled:opacity-50"
+                                type="button"
+                                className="text-[var(--color-error)] dark:text-red-400 hover:underline text-[11px] font-bold flex items-center gap-1 disabled:opacity-50 cursor-pointer"
                             >
                                 {isDeleting ? (
                                     <span className="material-symbols-outlined text-[16px] animate-spin">sync</span>
