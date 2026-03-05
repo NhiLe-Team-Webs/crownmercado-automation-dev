@@ -37,10 +37,16 @@ def _run_async(coro):
         loop.close()
 
 
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from src.shared.config.settings import settings
+
 async def _get_repo():
-    """Create a fresh DB session + repository for worker context."""
-    session = async_session_maker()
-    return VideoRepository(session), session
+    """Create a fresh DB engine + session + repository scoped specifically to this celery task's event loop.
+    Avoids asyncpg 'another operation is in progress' errors caused by sharing connection pools across loops."""
+    engine = create_async_engine(settings.DATABASE_URL, future=True, pool_pre_ping=True)
+    session_maker = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False, autoflush=False)
+    session = session_maker()
+    return VideoRepository(session), session, engine
 
 
 # ── Task 1: Merge Videos ────────────────────────────────────────────────────
@@ -55,7 +61,7 @@ def merge_videos_task(self, video_id: str) -> str:
     logger.info("Pipeline: Starting MERGE step", video_id=video_id)
 
     async def _execute():
-        repo, session = await _get_repo()
+        repo, session, engine = await _get_repo()
         storage = S3StorageService()
         _ensure_temp_dir()
 
@@ -94,6 +100,7 @@ def merge_videos_task(self, video_id: str) -> str:
             raise
         finally:
             await session.close()
+            await engine.dispose()
 
     return _run_async(_execute())
 
@@ -108,7 +115,7 @@ def strim_video_task(self, video_id: str) -> str:
     logger.info("Pipeline: Starting STRIM step", video_id=video_id)
 
     async def _execute():
-        repo, session = await _get_repo()
+        repo, session, engine = await _get_repo()
         storage = S3StorageService()
         editor = AutoEditorAdapter(temp_dir=TEMP_DIR)
         _ensure_temp_dir()
@@ -149,6 +156,7 @@ def strim_video_task(self, video_id: str) -> str:
             raise
         finally:
             await session.close()
+            await engine.dispose()
 
     return _run_async(_execute())
 
@@ -165,7 +173,7 @@ def insert_broll_task(self, video_id: str) -> str:
     logger.info("Pipeline: Starting BROLL step", video_id=video_id)
 
     async def _execute():
-        repo, session = await _get_repo()
+        repo, session, engine = await _get_repo()
         storage = S3StorageService()
         _ensure_temp_dir()
 
@@ -206,6 +214,7 @@ def insert_broll_task(self, video_id: str) -> str:
             raise
         finally:
             await session.close()
+            await engine.dispose()
 
     return _run_async(_execute())
 
@@ -220,7 +229,7 @@ def render_remotion_task(self, video_id: str) -> str:
     logger.info("Pipeline: Starting REMOTION step", video_id=video_id)
 
     async def _execute():
-        repo, session = await _get_repo()
+        repo, session, engine = await _get_repo()
         storage = S3StorageService()
         _ensure_temp_dir()
 
@@ -260,6 +269,7 @@ def render_remotion_task(self, video_id: str) -> str:
             raise
         finally:
             await session.close()
+            await engine.dispose()
 
     return _run_async(_execute())
 
@@ -283,10 +293,11 @@ def pipeline_error_handler(request, exc, tb, video_id: str = None):
 
     if video_id:
         async def _mark_failed():
-            repo, session = await _get_repo()
+            repo, session, engine = await _get_repo()
             try:
                 await repo.mark_pipeline_failed(video_id, error_msg)
             finally:
                 await session.close()
+                await engine.dispose()
 
         _run_async(_mark_failed())
