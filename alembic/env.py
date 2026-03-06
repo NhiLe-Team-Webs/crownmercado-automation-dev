@@ -26,8 +26,10 @@ if config.config_file_name is not None:
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
 from src.shared.database.base import Base
-# Import modules here to ensure they are registered with Base
-# from src.modules.video_processing.domain import entities
+# Import all models here to register them with Base.metadata for autogenerate
+from src.modules.video_upload.infrastructure.models import VideoModel
+from src.modules.video_processing.infrastructure.models import VideoJobModel
+
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
