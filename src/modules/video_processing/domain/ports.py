@@ -68,3 +68,14 @@ class IKeywordExtractorPort(ABC):
         Sử dụng word-level timestamps để sync chính xác với video.
         """
         pass
+
+
+class IVideoEditorPort(ABC):
+    """Port for video editing operations like trimming, cutting, removing silence, etc."""
+
+    @abstractmethod
+    async def remove_silence(self, input_path: str, output_path: str) -> str:
+        """
+        Remove silent parts from the video and return the output path.
+        """
+        pass

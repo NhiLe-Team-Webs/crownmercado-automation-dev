@@ -54,6 +54,11 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=${AWS_REGION}
       - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS}
+      - PEXELS_API_KEY=${PEXELS_API_KEY}
+      - ACONTEXT_API_KEY=${ACONTEXT_API_KEY}
+      - TEMP_DIR=/tmp/pipeline
     depends_on:
       - postgres
       - redis
@@ -67,6 +72,7 @@ services:
     restart: always
     volumes:
       - .:/app
+      - /app/src/remotion/node_modules
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       - REDIS_URL=redis://redis:6379/0
@@ -74,6 +80,11 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_REGION=${AWS_REGION}
       - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - ASSEMBLYAI_API_KEY=${ASSEMBLYAI_API_KEY}
+      - GEMINI_API_KEYS=${GEMINI_API_KEYS}
+      - PEXELS_API_KEY=${PEXELS_API_KEY}
+      - ACONTEXT_API_KEY=${ACONTEXT_API_KEY}
+      - TEMP_DIR=/tmp/pipeline
     depends_on:
       - postgres
       - redis

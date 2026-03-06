@@ -20,13 +20,13 @@ class AutoEditorAdapter(IVideoEditorPort):
         logger.info("Starting silence removal", input_path=input_path, output_path=output_path)
         
         # Build the command
-        # --silent-threshold: 0.03 is a common baseline (3%)
+        # --edit "audio:threshold=0.03": uses audio stream volume to detect silence at 3%
         # --margin: add 0.2s margin around cuts for better flow
         cmd = [
             "auto-editor",
             input_path,
             "--output", output_path,
-            "--silent-threshold", "0.03",
+            "--edit", "audio:threshold=0.03",
             "--margin", "0.2sec",
             "--no-open"
         ]

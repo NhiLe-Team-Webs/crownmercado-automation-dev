@@ -78,11 +78,11 @@ export const api = {
 
     // ── Pipeline API ────────────────────────────────────────────────────────
 
-    async startPipeline(videoId: string) {
+    async startPipeline(videoIds: string[]) {
         const res = await fetch(`${API_URL}/uploads/start-pipeline`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ video_id: videoId }),
+            body: JSON.stringify({ video_ids: videoIds }),
         });
         if (!res.ok) throw new Error('Failed to start pipeline');
         return res.json() as Promise<{ status: string; video_id: string; message: string }>;

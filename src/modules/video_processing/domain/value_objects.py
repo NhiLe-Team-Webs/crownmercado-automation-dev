@@ -59,6 +59,16 @@ class TextOverlay(BaseModel):
             raise ValueError("text không được rỗng")
         return v.strip()
 
+    @field_validator("text", mode='before')
+    @classmethod
+    def uppercase_text_for_specific_modes(cls, v: str, info) -> str:
+        # Convert text to uppercase for certain modes (like CINEMATIC_CALLOUT and SIDE_PANEL)
+        if "mode" in info.data:
+            mode = info.data["mode"]
+            if mode in [TextOverlayMode.CINEMATIC_CALLOUT, TextOverlayMode.SIDE_PANEL]:
+                return v.upper()
+        return v
+
     @field_validator("end")
     @classmethod
     def end_after_start(cls, v: float, info) -> float:
