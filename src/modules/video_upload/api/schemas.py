@@ -42,7 +42,7 @@ class VideoResponse(BaseModel):
 
 
 class StartPipelineRequest(BaseModel):
-    video_id: UUID
+    video_ids: List[UUID]
 
 
 class PipelineStatusResponse(BaseModel):

@@ -16,12 +16,10 @@ export default function UploadPage() {
     const handleBatchComplete = async (videoIds: string[]) => {
         if (videoIds.length === 0) return;
 
-        // Use the first video ID for pipeline (multi-file merge in future)
-        const videoId = videoIds[0];
-        setActiveVideoId(videoId);
-
         try {
-            await api.startPipeline(videoId);
+            // Send ALL video IDs to the backend — it merges them into one pipeline
+            const result = await api.startPipeline(videoIds);
+            setActiveVideoId(result.video_id);
             setPageState('processing');
         } catch (err) {
             setPipelineError(err instanceof Error ? err.message : 'Failed to start pipeline');
@@ -61,8 +59,8 @@ export default function UploadPage() {
                     >
                         <div className="w-full h-full flex flex-col items-center justify-center text-center">
                             <span className={`material-symbols-outlined text-[48px] mb-2 ${pageState === 'completed'
-                                    ? 'text-green-500'
-                                    : 'text-blue-500 animate-pulse'
+                                ? 'text-green-500'
+                                : 'text-blue-500 animate-pulse'
                                 }`}>
                                 {pageState === 'completed' ? 'task_alt' : 'auto_fix_high'}
                             </span>
@@ -111,7 +109,7 @@ export default function UploadPage() {
                             <button
                                 onClick={async () => {
                                     try {
-                                        await api.startPipeline(activeVideoId);
+                                        await api.startPipeline([activeVideoId]);
                                         setPageState('processing');
                                         setPipelineError(null);
                                     } catch (err) {

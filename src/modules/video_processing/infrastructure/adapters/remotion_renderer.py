@@ -16,7 +16,7 @@ from src.modules.video_processing.domain.value_objects import TextOverlay
 logger = structlog.get_logger()
 
 # Đường dẫn tới thư mục Remotion (relative từ project root)
-REMOTION_DIR = Path(__file__).parents[5] / "remotion"
+REMOTION_DIR = Path(__file__).parents[4] / "remotion"
 COMPOSITION_ID = "VideoWithOverlays"
 
 

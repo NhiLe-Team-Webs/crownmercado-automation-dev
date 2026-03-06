@@ -144,15 +144,15 @@ class TestGeminiKeywordExtractor:
         )
 
         with patch(
-            "src.modules.video_processing.infrastructure.adapters.gemini_keyword_extractor.genai.Client"
-        ) as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client_cls.return_value = mock_client
-            mock_client.models.generate_content.return_value = MagicMock(
+            "src.modules.video_processing.infrastructure.adapters.gemini_keyword_extractor.genai.GenerativeModel"
+        ) as mock_model_cls:
+            mock_model = MagicMock()
+            mock_model_cls.return_value = mock_model
+            mock_model.generate_content.return_value = MagicMock(
                 text=self._make_mock_response()
             )
 
-            extractor = GeminiKeywordExtractor(api_key="test-key")
+            extractor = GeminiKeywordExtractor(api_keys=["test-key"])
             result = await extractor.extract(self._make_transcript())
 
         assert len(result) == 2
@@ -167,9 +167,9 @@ class TestGeminiKeywordExtractor:
         )
 
         with patch(
-            "src.modules.video_processing.infrastructure.adapters.gemini_keyword_extractor.genai.Client"
+            "src.modules.video_processing.infrastructure.adapters.gemini_keyword_extractor.genai.GenerativeModel"
         ):
-            extractor = GeminiKeywordExtractor(api_key="test-key")
+            extractor = GeminiKeywordExtractor(api_keys=["test-key"])
             result = await extractor.extract(Transcript(full_text="   "))
 
         assert result == []
@@ -188,13 +188,13 @@ class TestGeminiKeywordExtractor:
         ])
 
         with patch(
-            "src.modules.video_processing.infrastructure.adapters.gemini_keyword_extractor.genai.Client"
-        ) as mock_client_cls:
-            mock_client = MagicMock()
-            mock_client_cls.return_value = mock_client
-            mock_client.models.generate_content.return_value = MagicMock(text=overlapping_response)
+            "src.modules.video_processing.infrastructure.adapters.gemini_keyword_extractor.genai.GenerativeModel"
+        ) as mock_model_cls:
+            mock_model = MagicMock()
+            mock_model_cls.return_value = mock_model
+            mock_model.generate_content.return_value = MagicMock(text=overlapping_response)
 
-            extractor = GeminiKeywordExtractor(api_key="test-key")
+            extractor = GeminiKeywordExtractor(api_keys=["test-key"])
             transcript = Transcript(
                 full_text="First word. Too close. Valid word.",
                 words=[

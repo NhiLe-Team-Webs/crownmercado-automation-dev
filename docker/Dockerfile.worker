@@ -2,14 +2,27 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+# ── System deps: build tools, ffmpeg, curl (for Node setup) ──
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     ffmpeg \
+    curl \
+    gnupg \
     && rm -rf /var/lib/apt/lists/*
 
+# ── Node.js 20 (required for Remotion rendering) ──
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# ── Python dependencies ──
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# ── Remotion dependencies (install at build time) ──
+COPY src/remotion/package.json src/remotion/package-lock.json* /app/src/remotion/
+RUN cd /app/src/remotion && npm install --production
 
 COPY . .
 

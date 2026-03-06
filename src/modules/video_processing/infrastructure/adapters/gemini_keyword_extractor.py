@@ -9,8 +9,8 @@ import asyncio
 import structlog
 from typing import Any
 
-from google import genai
-from google.genai import types as genai_types
+import google.generativeai as genai
+from google.generativeai.types import GenerationConfig
 
 from src.modules.video_processing.domain.ports import IKeywordExtractorPort
 from src.modules.video_processing.domain.value_objects import (
@@ -125,7 +125,7 @@ class GeminiKeywordExtractor(IKeywordExtractorPort):
         
         # Initialize default client with the first key
         self._keys_index = 0
-        self._client = genai.Client(api_key=self.api_keys[0])
+        genai.configure(api_key=self.api_keys[0])
 
     async def extract(self, transcript: Transcript) -> list[TextOverlay]:
         """Phân tích transcript → TextOverlay[] với word-level sync"""
@@ -173,15 +173,21 @@ class GeminiKeywordExtractor(IKeywordExtractorPort):
         """Gọi Gemini API (có cơ chế xoay trần API keys nếu dính lỗi Quota 429/503)"""
         attempts = 0
         max_attempts = len(self.api_keys)
-        
+
         while attempts < max_attempts:
             try:
-                response = self._client.models.generate_content(
-                    model=GEMINI_MODEL,
+                # Reconfigure with the current API key
+                genai.configure(api_key=self.api_keys[self._keys_index])
+                model = genai.GenerativeModel(
+                    model_name=GEMINI_MODEL,
+                    system_instruction=SYSTEM_PROMPT
+                )
+
+                response = model.generate_content(
                     contents=user_prompt,
-                    config=genai_types.GenerateContentConfig(
-                        system_instruction=SYSTEM_PROMPT,
+                    generation_config=GenerationConfig(
                         temperature=0.3,
+                        response_mime_type="application/json",
                     ),
                 )
                 return response.text
@@ -190,11 +196,10 @@ class GeminiKeywordExtractor(IKeywordExtractorPort):
                 if "429" in error_msg or "503" in error_msg or "quota" in error_msg or "exhausted" in error_msg:
                     logger.warning(f"Key {self.api_keys[self._keys_index][:10]}... gặp lỗi {e}. Đang xoay vòng Key mới.")
                     self._keys_index = (self._keys_index + 1) % len(self.api_keys)
-                    self._client = genai.Client(api_key=self.api_keys[self._keys_index])
                     attempts += 1
                 else:
                     raise e
-                    
+
         raise Exception("Toàn bộ Gemini API Keys đều đã cạn kiệt Quota hoặc gặp lỗi kết nối.")
 
     def _parse_and_validate(self, raw: str, transcript: Transcript) -> list[TextOverlay]:

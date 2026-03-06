@@ -167,8 +167,8 @@ async def start_pipeline(
 ):
     """
     Trigger the full video processing pipeline as a Celery chain.
-    Chain: merge → strim → broll → remotion
-    Each step runs in worker (background), not in API process.
+    Accepts multiple video_ids → merges into one → strim → broll → remotion.
+    Uses the FIRST video_id as the primary pipeline record.
     """
     from src.worker.pipeline_tasks import (
         merge_videos_task, strim_video_task,
@@ -176,22 +176,38 @@ async def start_pipeline(
         pipeline_error_handler,
     )
 
-    repo = VideoRepository(db)
-    video = await repo.get_by_id(request.video_id)
-    if not video:
-        raise HTTPException(status_code=404, detail="Video not found")
+    if not request.video_ids:
+        raise HTTPException(status_code=400, detail="video_ids cannot be empty")
 
-    if video.pipeline_status not in ("idle", "failed"):
+    repo = VideoRepository(db)
+
+    # Validate all videos exist and collect their S3 keys
+    raw_s3_keys = []
+    for vid in request.video_ids:
+        video = await repo.get_by_id(vid)
+        if not video:
+            raise HTTPException(status_code=404, detail=f"Video {vid} not found")
+        raw_s3_keys.append(video.s3_key)
+
+    # Use the first video as the primary pipeline record
+    primary_id = request.video_ids[0]
+    primary = await repo.get_by_id(primary_id)
+
+    if primary.pipeline_status not in ("idle", "failed"):
         raise HTTPException(
             status_code=409,
-            detail=f"Pipeline already in progress (status: {video.pipeline_status})"
+            detail=f"Pipeline already in progress (status: {primary.pipeline_status})"
         )
 
-    # Reset pipeline state before starting
-    await repo.update_pipeline_status(request.video_id, "merging")
+    # Store all raw S3 keys as JSON on the primary video for the merge step
+    import json
+    await repo.update_pipeline_status(
+        primary_id, "merging",
+        raw_s3_keys_json=json.dumps(raw_s3_keys)
+    )
 
     # Build Celery chain — each task returns video_id to the next
-    video_id_str = str(request.video_id)
+    video_id_str = str(primary_id)
     pipeline = chain(
         merge_videos_task.s(video_id_str),
         strim_video_task.s(),
@@ -202,7 +218,7 @@ async def start_pipeline(
 
     return {
         "status": "started",
-        "video_id": str(request.video_id),
+        "video_id": str(primary_id),
         "message": "Pipeline triggered — poll /pipeline-status for progress",
     }
 

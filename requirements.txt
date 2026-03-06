@@ -23,7 +23,8 @@ python-dotenv>=1.0.0
 structlog>=24.1.0
 
 # AI
-google-genai>=1.0.0
+google-generativeai>=0.4.0
+assemblyai>=0.33.0
 
 # Dev dependencies
 pytest>=7.4.0

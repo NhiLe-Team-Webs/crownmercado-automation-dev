@@ -32,8 +32,10 @@ class VideoModel(Base):
 
     # ── Pipeline tracking columns ────────────────────────────────────────────
     pipeline_status = Column(String(30), server_default=PipelineStatus.IDLE.value)
+    raw_s3_keys_json = Column(Text, nullable=True)          # JSON array of all raw uploaded S3 keys
     merged_s3_key = Column(String(500), nullable=True)      # S3 key sau khi merge xong
-    strimmed_s3_key = Column(String(500), nullable=True)     # S3 key sau khi strim xong
-    broll_s3_key = Column(String(500), nullable=True)        # S3 key sau khi chèn B-roll xong
-    final_s3_key = Column(String(500), nullable=True)        # S3 key video cuối cùng (sau Remotion)
-    pipeline_error = Column(Text, nullable=True)             # Lý do lỗi nếu pipeline fail
+    strimmed_s3_key = Column(String(500), nullable=True)    # S3 key sau khi strim xong
+    broll_s3_key = Column(String(500), nullable=True)       # S3 key sau khi chèn B-roll xong
+    final_s3_key = Column(String(500), nullable=True)       # S3 key video cuối cùng (sau Remotion)
+    pipeline_error = Column(Text, nullable=True)            # Lý do lỗi nếu pipeline fail
+    overlays_json = Column(Text, nullable=True)             # JSON array of TextOverlay metadata for Remotion
