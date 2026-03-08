@@ -23,6 +23,19 @@ class Settings(BaseSettings):
     
     # AI APIs
     GEMINI_API_KEY: Optional[str] = None
+    ASSEMBLYAI_API_KEY: Optional[str] = None
+    PEXELS_API_KEY: Optional[str] = None
+    
+    # Telegram Notifications
+    TELEGRAM_BOT_TOKEN: Optional[str] = None
+    TELEGRAM_CHAT_ID: Optional[str] = None
+    
+    # Remotion Lambda (AWS)
+    REMOTION_LAMBDA_SERVE_URL: Optional[str] = None
+    REMOTION_LAMBDA_FUNCTION_NAME: str = "remotion-render-4-0-417-mem2048mb-disk2048mb-120sec"
+    REMOTION_LAMBDA_REGION: str = "us-east-1"
+    REMOTION_AWS_ACCESS_KEY_ID: Optional[str] = None
+    REMOTION_AWS_SECRET_ACCESS_KEY: Optional[str] = None
     
     # Security
     SECRET_KEY: str = "yoursupersecretkeyhere"

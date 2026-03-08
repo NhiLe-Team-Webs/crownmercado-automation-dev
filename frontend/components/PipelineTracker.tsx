@@ -106,12 +106,12 @@ export default function PipelineTracker({ videoId, onComplete, onError }: Pipeli
                             {/* Step content */}
                             <div className={`pb-6 pt-2 transition-opacity duration-300 ${isPending ? 'opacity-40' : 'opacity-100'}`}>
                                 <p className={`text-sm font-bold tracking-tight ${isDone
-                                        ? 'text-green-600 dark:text-green-400'
-                                        : isFailedStep
-                                            ? 'text-red-600 dark:text-red-400'
-                                            : isActive
-                                                ? 'text-blue-600 dark:text-blue-400'
-                                                : 'text-gray-500 dark:text-gray-500'
+                                    ? 'text-green-600 dark:text-green-400'
+                                    : isFailedStep
+                                        ? 'text-red-600 dark:text-red-400'
+                                        : isActive
+                                            ? 'text-blue-600 dark:text-blue-400'
+                                            : 'text-gray-500 dark:text-gray-500'
                                     }`}>
                                     {step.label}
                                     {isActive && (
@@ -137,7 +137,7 @@ export default function PipelineTracker({ videoId, onComplete, onError }: Pipeli
                     <button
                         onClick={async () => {
                             try {
-                                await api.startPipeline(videoId);
+                                await api.startPipeline([videoId]);
                                 setPolling(true);
                             } catch (err) {
                                 onError?.(err instanceof Error ? err.message : 'Retry failed');
@@ -160,8 +160,9 @@ export default function PipelineTracker({ videoId, onComplete, onError }: Pipeli
                             try {
                                 const { url } = await api.getVideoDownloadUrl(videoId, 'attachment');
                                 window.location.assign(url);
-                            } catch {
-                                // Silently fail
+                            } catch (error) {
+                                console.error('Download failed:', error);
+                                onError?.(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
                             }
                         }}
                         className="px-10 h-14 bg-green-600 hover:bg-green-700 text-white font-bold rounded-full shadow-2xl shadow-green-500/30 active:scale-[0.98] transition-all flex items-center gap-3 tracking-wider"

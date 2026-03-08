@@ -23,6 +23,7 @@ from src.modules.video_processing.infrastructure.storage.s3_storage import S3Sto
 from src.modules.video_processing.infrastructure.adapters.video_editor_adapter import AutoEditorAdapter
 from src.modules.video_processing.infrastructure.adapters.gemini_keyword_extractor import GeminiKeywordExtractor
 from src.modules.video_processing.infrastructure.adapters.remotion_renderer import RemotionRenderer
+from src.modules.video_processing.infrastructure.adapters.remotion_lambda_renderer import RemotionLambdaRenderer
 from src.modules.video_processing.domain.value_objects import Transcript, WordSegment
 
 logger = structlog.get_logger()
@@ -344,7 +345,7 @@ def insert_broll_task(self, video_id: str) -> str:
 
 # ── Task 4: Remotion Render (Text Highlight + B-Roll Compositing) ────────────
 
-@celery_app.task(name="pipeline.render_remotion", bind=True, max_retries=1)
+@celery_app.task(name="pipeline.render_remotion", bind=True, max_retries=2)
 def render_remotion_task(self, video_id: str) -> str:
     """
     Download strimmed/broll base video → render with Remotion using existing components
@@ -388,10 +389,22 @@ def render_remotion_task(self, video_id: str) -> str:
             import shutil
             shutil.copy2(local_base, str(remotion_video_path))
 
-            # Build the Remotion render config using existing RemotionRenderer
-            renderer = RemotionRenderer(output_dir=TEMP_DIR)
+            # Build the Remotion render config using selected renderer
+            if settings.REMOTION_LAMBDA_SERVE_URL:
+                renderer = RemotionLambdaRenderer(output_dir=TEMP_DIR)
+                # MUST use S3 presigned URL for cloud render since it can't read local files
+                # Use broll_s3_key if it exists, otherwise fallback to strimmed or merged
+                base_s3_key = video.broll_s3_key or video.strimmed_s3_key or video.merged_s3_key
+                video_src = await storage.generate_presigned_url(base_s3_key, expiration=3600)
+                logger.info("Using RemotionLambdaRenderer (AWS Lambda) with presigned URL")
+            else:
+                renderer = RemotionRenderer(output_dir=TEMP_DIR)
+                video_src = remotion_video_name
+                logger.info("Using RemotionRenderer (Local Docker) with local file")
+
             render_config = {
-                "video_src": f"http://localhost:3000/public/{remotion_video_name}",  # Remotion staticFile
+                "video_src": video_src,  # Presigned URL (Lambda) OR local filename (Docker)
+
                 "duration_seconds": duration,
                 "fps": 30,
                 "overlays": overlays_data,
@@ -453,6 +466,48 @@ def render_remotion_task(self, video_id: str) -> str:
         except Exception as e:
             await repo.mark_pipeline_failed(video_id, f"REMOTION failed: {str(e)}")
             raise
+        finally:
+            await session.close()
+            await engine.dispose()
+
+    return _run_async(_execute())
+
+
+# ── Task 5: Notifications ────────────────────────────────────────────────────
+
+@celery_app.task(name="pipeline.send_notification", bind=True, max_retries=2)
+def send_notification_task(self, video_id: str) -> str:
+    """
+    Tạo presigned URL cho video hoàn tất và gửi qua Telegram.
+    """
+    logger.info("Pipeline: Starting NOTIFICATION step", video_id=video_id)
+
+    async def _execute():
+        repo, session, engine = await _get_repo()
+        storage = S3StorageService()
+        
+        try:
+            video = await repo.get_by_id(video_id)
+            if not video or not video.s3_key:
+                raise ValueError(f"Video {video_id} not found or no final s3_key")
+            
+            from src.modules.notifications.infrastructure.adapters.telegram_adapter import TelegramAdapter
+            notifier = TelegramAdapter()
+
+            if notifier.bot_token and notifier.chat_id:
+                # Tạo presigned url 24h
+                url = await storage.generate_presigned_url(video.s3_key, expiration=86400)
+                file_name = video.original_filename or "Video_Rendered.mp4"
+                await notifier.send_video_link(video_id, file_name, url)
+                logger.info("Gửi Telegram thành công", video_id=video_id)
+            else:
+                logger.info("Bỏ qua thông báo Telegram (chưa cấu hình)")
+
+            return video_id
+        except Exception as e:
+            logger.error("Send notification failed", error=str(e), video_id=video_id)
+            # Notification error doesn't fail the pipeline (already marked completed)
+            return video_id
         finally:
             await session.close()
             await engine.dispose()

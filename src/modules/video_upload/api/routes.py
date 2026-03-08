@@ -195,6 +195,7 @@ async def start_pipeline(
     from src.worker.pipeline_tasks import (
         merge_videos_task, strim_video_task,
         insert_broll_task, render_remotion_task,
+        send_notification_task,
         pipeline_error_handler,
     )
 
@@ -267,21 +268,25 @@ async def start_pipeline(
             strim_video_task.s(),
             insert_broll_task.s(),
             render_remotion_task.s(),
+            send_notification_task.s(),
         )
     elif resume_point == 1:  # Resume from strim step
         pipeline = chain(
             strim_video_task.s(video_id_str),
             insert_broll_task.s(),
             render_remotion_task.s(),
+            send_notification_task.s(),
         )
     elif resume_point == 2:  # Resume from broll step
         pipeline = chain(
             insert_broll_task.s(video_id_str),
             render_remotion_task.s(),
+            send_notification_task.s(),
         )
     elif resume_point == 3:  # Resume from render step
         pipeline = chain(
             render_remotion_task.s(video_id_str),
+            send_notification_task.s(),
         )
     else:
         # Fallback to starting from the beginning
@@ -294,6 +299,7 @@ async def start_pipeline(
             strim_video_task.s(),
             insert_broll_task.s(),
             render_remotion_task.s(),
+            send_notification_task.s(),
         )
 
     pipeline.apply_async(link_error=pipeline_error_handler.s(video_id=video_id_str))

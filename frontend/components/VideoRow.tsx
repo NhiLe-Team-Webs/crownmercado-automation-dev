@@ -27,7 +27,11 @@ export default function VideoRow({ video }: Props) {
         if (video.status === 'completed') {
             api.getVideoDownloadUrl(video.id, 'inline')
                 .then(res => setVideoUrl(res.url))
-                .catch(err => console.error('Failed to get video url:', err));
+                .catch(err => {
+                    console.error('Failed to get video url for preview:', err);
+                    // Set a default preview URL or leave as empty string
+                    setVideoUrl('');
+                });
         }
     }, [video.id, video.status]);
 
@@ -39,6 +43,7 @@ export default function VideoRow({ video }: Props) {
             window.location.assign(url);
         } catch (error) {
             console.error('Download failed:', error);
+            alert(`Download failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     };
 
@@ -102,7 +107,11 @@ export default function VideoRow({ video }: Props) {
                             loop
                         />
                     ) : (
-                        <div className="w-full h-full bg-slate-900 opacity-80" />
+                        <div className="w-full h-full bg-slate-900 opacity-80 flex items-center justify-center">
+                            {video.status === 'completed' && !videoUrl && (
+                                <span className="text-gray-400 text-sm">Preview unavailable</span>
+                            )}
+                        </div>
                     )}
 
                     <div className="absolute inset-0 bg-black/10 opacity-100 group-hover:opacity-0 transition-opacity pointer-events-none"></div>

@@ -1,5 +1,5 @@
 import React from "react";
-import { AbsoluteFill, Video, useVideoConfig } from "remotion";
+import { AbsoluteFill, Video, useVideoConfig, staticFile } from "remotion";
 import type { VideoCompositionProps } from "./types";
 import { TextOverlayLayer } from "./components/TextOverlayLayer";
 
@@ -15,8 +15,8 @@ export const MyComposition: React.FC<VideoCompositionProps> = ({
 
   return (
     <AbsoluteFill style={{ background: "#000" }}>
-      {/* Base video */}
-      <Video src={videoSrc} style={{ width: "100%", height: "100%" }} />
+      {/* Base video: handle both presigned S3 URLs (Lambda) and static local files (Docker) */}
+      <Video src={videoSrc.startsWith('http') ? videoSrc : staticFile(videoSrc)} style={{ width: "100%", height: "100%" }} />
 
       {/* Text overlay layer — sync theo word-level timestamps */}
       <AbsoluteFill>
