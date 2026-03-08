@@ -69,6 +69,7 @@ class RemotionLambdaRenderer(IRenderEnginePort):
             "--function-name", function_name,
             "--log", "verbose",
             "--jpeg-quality", "80", 
+            "--frames-per-lambda", "2000", # Limit concurrency to bypass Free Tier AWS limit 10
         ]
 
         logger.info(

@@ -1,0 +1,7 @@
+[90mRegion = us-east-1[39m
+
+Concurrency limit: 10 - [92mIncrease recommended![39m
+[90mThe maximum amount of Lambda functions which can concurrently execute.[39m
+[90mRun `npx remotion lambda quotas increase` to ask AWS to increase your limit.[39m
+
+[90mThe maximum amount of concurrency increase in 10 seconds[39m

@@ -44,7 +44,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # ── Remotion dependencies (install at build time) ──
 COPY src/remotion/package.json src/remotion/package-lock.json* /app/src/remotion/
-RUN cd /app/src/remotion && npm install --production
+RUN cd /app/src/remotion && npm install
 
 COPY . .
 
