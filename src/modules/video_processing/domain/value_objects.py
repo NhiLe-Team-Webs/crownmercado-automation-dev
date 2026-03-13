@@ -62,9 +62,17 @@ class TextOverlay(BaseModel):
         return v
 
 
+class EditorConfig(BaseModel):
+    silent_threshold: float = Field(0.08, description="Ngưỡng âm thanh coi là im lặng (0.0-1.0)")
+    margin: str = Field("0.1sec", description="Lề xung quanh đoạn cắt")
+    min_cut_length: str = Field("0.2sec", description="Độ dài tối thiểu của đoạn bị cắt")
+    min_clip_length: str = Field("0.2sec", description="Độ dài tối thiểu của đoạn được giữ lại")
+
+
 class RenderConfig(BaseModel):
     resolution: str = "1920x1080"
     format: str = "mp4"
+    editor_config: EditorConfig = EditorConfig()
     text_overlays: list[TextOverlay] = Field(
         default_factory=list,
         description="Danh sách text overlay được LLM extract"

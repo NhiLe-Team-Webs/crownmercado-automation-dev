@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from uuid import UUID
 from .entities import VideoJob
-from .value_objects import Transcript, TextOverlay
+from .value_objects import Transcript, EditorConfig, TextOverlay
 
 class IVideoRepository(ABC):
     @abstractmethod
@@ -34,6 +34,22 @@ class IRenderEnginePort(ABC):
     @abstractmethod
     async def render(self, job_id: UUID, layers: list) -> str:
         """Trả về output file path"""
+        pass
+
+class IVideoEditorPort(ABC):
+    @abstractmethod
+    async def remove_silence(
+        self, 
+        input_path: str, 
+        output_path: str, 
+        config: Optional['EditorConfig'] = None
+    ) -> str:
+        """Cắt bỏ đoạn im lặng và trả về path của file đã cắt"""
+        pass
+
+    @abstractmethod
+    async def download_file(self, remote_path: str, local_path: str) -> None:
+        """Download file từ storage về local"""
         pass
 
 class IStoragePort(ABC):

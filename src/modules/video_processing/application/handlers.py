@@ -7,6 +7,7 @@ from src.modules.video_processing.domain.entities import VideoJob
 from src.modules.video_processing.domain.ports import (
     IVideoRepository,
     IKeywordExtractorPort,
+    IVideoEditorPort,
 )
 
 logger = structlog.get_logger()
@@ -16,9 +17,11 @@ class ProcessVideoJobUseCase:
     def __init__(
         self,
         video_repo: IVideoRepository,
+        editor_port: IVideoEditorPort,
         keyword_extractor: Optional[IKeywordExtractorPort] = None,
     ):
         self.video_repo = video_repo
+        self.editor_port = editor_port
         self.keyword_extractor = keyword_extractor
 
     async def execute(self, job_id: UUID) -> Optional[VideoJob]:
@@ -30,12 +33,29 @@ class ProcessVideoJobUseCase:
         await self.video_repo.save(job)
 
         # ── Pipeline steps ────────────────────────────────────────────────────
-        # Step 1: Silence removal (TODO: implement)
-        # Step 2: ASR / Transcription (TODO: implement)
-
-        # Step 3: Keyword extraction → text overlays
-        if self.keyword_extractor and job.transcript:
-            try:
+        try:
+            # Step 1: Silence removal
+            logger.info("Starting silence removal step", job_id=str(job_id))
+            
+            output_dir = os.path.dirname(job.input_file_path)
+            output_filename = f"edited_{os.path.basename(job.input_file_path)}"
+            output_path = os.path.join(output_dir, output_filename)
+            
+            edited_path = await self.editor_port.remove_silence(
+                job.input_file_path,
+                output_path,
+                config=job.render_config.editor_config
+            )
+            
+            # For now, we update the path for subsequent steps
+            # In a production system, we might want to track intermediate files
+            job.input_file_path = edited_path
+            await self.video_repo.save(job)
+            
+            # Step 2: ASR / Transcription (TODO: implement)
+            
+            # Step 3: Keyword extraction → text overlays
+            if self.keyword_extractor and job.transcript:
                 logger.info("Running keyword extraction", job_id=str(job_id))
                 overlays = await self.keyword_extractor.extract(job.transcript)
                 job.render_config.text_overlays = overlays
@@ -45,13 +65,11 @@ class ProcessVideoJobUseCase:
                     job_id=str(job_id),
                     overlay_count=len(overlays),
                 )
-            except Exception as exc:
-                # Không fail toàn bộ job nếu extraction lỗi
-                logger.warning(
-                    "Keyword extraction failed, continuing without overlays",
-                    job_id=str(job_id),
-                    error=str(exc),
-                )
+        except Exception as exc:
+            logger.error("Pipeline failed", job_id=str(job_id), error=str(exc))
+            job.mark_as_failed()
+            await self.video_repo.save(job)
+            raise
 
         # Step 4: Render (TODO: inject IRenderEnginePort)
 
