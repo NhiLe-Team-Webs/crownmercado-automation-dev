@@ -1,6 +1,7 @@
 import React from "react";
 import { AbsoluteFill, OffthreadVideo, interpolate, useCurrentFrame, spring, useVideoConfig, staticFile } from "remotion";
 import { smartWrapText } from "../utils/smart-text-wrapper";
+import { applyAnimationEffect, type AnimationPreset } from "../utils/text-animation-effects";
 
 export const BRollOverlay: React.FC<{
     url?: string;
@@ -8,7 +9,8 @@ export const BRollOverlay: React.FC<{
     text?: string;
     highlightWord?: string;
     focalPoint?: { x: number; y: number };
-}> = ({ url, durationInFrames, text, highlightWord, focalPoint }) => {
+    animationPreset?: AnimationPreset;
+}> = ({ url, durationInFrames, text, highlightWord, focalPoint, animationPreset = "default" }) => {
     const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
     const normalizedSrc = !url
@@ -109,22 +111,15 @@ export const BRollOverlay: React.FC<{
                         wordBreak: "keep-all",
                     }}>
                         {displayWords.map((w, i) => {
-                            const delay = i * WORD_DELAY;
-
-                            const wordSpring = spring({
-                                fps,
-                                frame: frame - delay,
-                                config: { damping: 16, stiffness: 120 },
+                            // Apply animation effect based on preset
+                            const effect = applyAnimationEffect(animationPreset, {
+                                frame,
+                                wordIndex: i,
+                                totalWords: displayWords.length,
+                                durationInFrames,
+                                wordDelay: WORD_DELAY,
+                                highlightWord: effectiveHighlightWord,
                             });
-
-                            const wordTranslateY = interpolate(wordSpring, [0, 1], [40, 0]);
-
-                            const wordOpacity = interpolate(
-                                frame - delay,
-                                [0, 5],
-                                [0, 1],
-                                { extrapolateRight: "clamp" }
-                            );
 
                             const normalizedWord = w.toLowerCase().replace(/[^a-z0-9]/g, '');
                             const normalizedHighlight = effectiveHighlightWord ? effectiveHighlightWord.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
@@ -140,10 +135,11 @@ export const BRollOverlay: React.FC<{
                             return (
                                 <span key={i} style={{
                                     position: "relative",
-                                    opacity: wordOpacity,
-                                    transform: `translateY(${wordTranslateY}px)`,
+                                    opacity: effect.opacity,
+                                    transform: effect.transform,
+                                    filter: effect.filter,
+                                    color: isHighlight ? colorTheme.text : effect.color,
                                     display: "inline-block",
-                                    color: isHighlight ? colorTheme.text : "white",
                                     textShadow: isHighlight
                                         ? `0 0 20px ${colorTheme.glow}, 0px 4px 12px rgba(0,0,0,0.5)`
                                         : "0px 4px 12px rgba(0,0,0,0.5)",

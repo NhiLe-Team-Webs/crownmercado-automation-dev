@@ -68,3 +68,15 @@ class IKeywordExtractorPort(ABC):
         Sử dụng word-level timestamps để sync chính xác với video.
         """
         pass
+
+
+class IBrollFetcher(ABC):
+    """Port cho service tìm kiếm và chọn lọc B-roll chất lượng cao"""
+
+    @abstractmethod
+    async def fetch_best_match(self, overlay: "TextOverlay") -> Optional[str]:
+        """
+        Tìm kiếm và chấm điểm để trả về URL video B-roll tốt nhất.
+        Trả về None nếu không tìm thấy clip nào đạt ngưỡng chất lượng.
+        """
+        pass

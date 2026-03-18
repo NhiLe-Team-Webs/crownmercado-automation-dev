@@ -16,183 +16,176 @@ const defaultProps: VideoCompositionProps = {
   overlays: [
     {
       text: "Marketing Revolution",
-      start: 2.36,
-      end: 7.36,
-      mode: "BOTTOM_TITLE",
-      position: "bottom_center"
+      start: 2.04,
+      end: 6.04,
+      mode: "CINEMATIC_CALLOUT",
+      position: "left",
+      highlight_word: "Revolution"
     },
     {
       text: "Traditional Marketing",
-      start: 10.48,
-      end: 15.36,
+      start: 10.04,
+      end: 14.04,
       mode: "SIDE_PANEL",
-      position: "left"
+      position: "left",
+      highlight_word: "Traditional"
     },
     {
       text: "AI Automation",
-      start: 18.4,
-      end: 23.36,
-      mode: "CINEMATIC_CALLOUT",
-      position: "left"
+      start: 15.52,
+      end: 20.52,
+      mode: "B_ROLL_VIDEO",
+      position: "left",
+      url: "generated-broll/ai-automation-0e8bbab5c257.mp4",
+      highlight_word: "Automation"
     },
     {
       text: "AI vs. Traditional",
       start: 27.3,
-      end: 32.3,
-      mode: "BOTTOM_TITLE",
-      position: "bottom_center"
+      end: 31.3,
+      mode: "CINEMATIC_CALLOUT",
+      position: "left",
+      highlight_word: "Traditional"
     },
     {
       text: "Human Intuition",
-      start: 43.5,
-      end: 48.3,
-      mode: "CINEMATIC_CALLOUT",
-      position: "right"
-    },
-    {
-      text: "Data & Prediction",
-      start: 59.38,
-      end: 64.3,
-      mode: "CINEMATIC_CALLOUT",
-      position: "left"
-    },
-    {
-      text: "Millions of Behaviors",
-      start: 67.5,
-      end: 72.5,
-      mode: "B_ROLL_VIDEO",
-      position: "bottom_center",
-      url: "https://videos.pexels.com/video-files/36418628/15442044_640_360_25fps.mp4",
-      search_query: "data analysis user behavior",
-      highlight_word: "Millions"
-    },
-    {
-      text: "Coca-Cola Case",
-      start: 106.13,
-      end: 111.13,
-      mode: "SIDE_PANEL",
-      position: "left"
-    },
-    {
-      text: "ChatGPT & DALL-E",
-      start: 114.33,
-      end: 119.13,
-      mode: "CINEMATIC_CALLOUT",
-      position: "right"
-    },
-    {
-      text: "User Generated Content",
-      start: 130.13,
-      end: 135.13,
-      mode: "B_ROLL_VIDEO",
-      position: "bottom_center",
-      url: "https://videos.pexels.com/video-files/7451171/7451171-hd_1920_1080_25fps.mp4",
-      search_query: "user generated content social media",
-      highlight_word: "Content"
-    },
-    {
-      text: "Weeks of Planning",
-      start: 146.04,
-      end: 151.13,
-      mode: "CINEMATIC_CALLOUT",
-      position: "right"
-    },
-    {
-      text: "Fans into Creators",
-      start: 154.16,
-      end: 159.13,
+      start: 41.62,
+      end: 45.62,
       mode: "BOTTOM_TITLE",
-      position: "bottom_center"
+      position: "bottom_center",
+      highlight_word: "Intuition"
     },
     {
-      text: "DALL-E Draw Ketchup",
-      start: 169.98,
-      end: 175.13,
-      mode: "B_ROLL_VIDEO",
+      text: "Data & Personalization",
+      start: 53.34,
+      end: 57.34,
+      mode: "BOTTOM_TITLE",
       position: "bottom_center",
-      url: "https://videos.pexels.com/video-files/8798087/8798087-hd_2048_1080_25fps.mp4",
-      search_query: "AI drawing ketchup",
+      highlight_word: "Personalization"
+    },
+    {
+      text: "Creativity vs. Algorithm",
+      start: 63.74,
+      end: 67.74000000000001,
+      mode: "CINEMATIC_CALLOUT",
+      position: "left",
+      highlight_word: "Creativity"
+    },
+    {
+      text: "Coca-Cola: Create Real Magic",
+      start: 106.13,
+      end: 113.13,
+      mode: "B_ROLL_VIDEO",
+      position: "left",
+      url: "generated-broll/coca-cola-create-real-ma-71b6cd288963.mp4",
+      highlight_word: "Create"
+    },
+    {
+      text: "Instant Creativity, Global Reach",
+      start: 134.48,
+      end: 138.72,
+      mode: "BOTTOM_TITLE",
+      position: "bottom_center",
+      highlight_word: "Creativity"
+    },
+    {
+      text: "Heinz: AI Ketchup",
+      start: 154.76,
+      end: 160.76,
+      mode: "B_ROLL_VIDEO",
+      position: "left",
+      url: "generated-broll/heinz-ai-ketchup-b54b04fbfb3a.mp4",
       highlight_word: "Ketchup"
     },
     {
-      text: "Heinz Bottle",
-      start: 178.26,
-      end: 183.13,
+      text: "Timeless Branding + AI",
+      start: 191.84,
+      end: 196.76,
       mode: "CINEMATIC_CALLOUT",
-      position: "left"
+      position: "right",
+      highlight_word: "Timeless"
     },
     {
-      text: "Timeless Branding",
-      start: 186.52,
-      end: 191.13,
-      mode: "BOTTOM_TITLE",
-      position: "bottom_center"
-    },
-    {
-      text: "Cost Savings",
-      start: 213.04,
-      end: 218.04,
-      mode: "CINEMATIC_CALLOUT",
-      position: "right"
-    },
-    {
-      text: "Hyper-Personalization",
-      start: 222.0,
-      end: 227.0,
+      text: "Fast, Adaptive Creativity",
+      start: 201.16,
+      end: 207.72,
       mode: "SIDE_PANEL",
-      position: "left"
+      position: "left",
+      highlight_word: "Creativity"
     },
     {
-      text: "AI isn't replacing marketers",
-      start: 231.92,
-      end: 236.92,
-      mode: "B_ROLL_VIDEO",
+      text: "Cost Savings & Efficiency",
+      start: 211.08,
+      end: 218.32,
+      mode: "BOTTOM_TITLE",
       position: "bottom_center",
-      url: "https://videos.pexels.com/video-files/8480243/8480243-hd_1920_1080_25fps.mp4",
-      search_query: "marketer using AI",
-      highlight_word: "replacing"
+      highlight_word: "Efficiency"
     },
     {
-      text: "Hybrid Marketers",
-      start: 248.7,
-      end: 253.7,
+      text: "AI Replaces Non-Users",
+      start: 231.92,
+      end: 238.0,
+      mode: "CINEMATIC_CALLOUT",
+      position: "left",
+      highlight_word: "Replaces"
+    },
+    {
+      text: "The Hybrid Marketer",
+      start: 246.86,
+      end: 254.46,
+      mode: "B_ROLL_VIDEO",
+      position: "left",
+      url: "generated-broll/the-hybrid-marketer-789fcda09677.mp4",
+      highlight_word: "Marketer"
+    },
+    {
+      text: "1. Human Storytelling",
+      start: 258.62,
+      end: 265.92,
       mode: "BOTTOM_TITLE",
-      position: "bottom_center"
+      position: "bottom_center",
+      highlight_word: "Storytelling"
     },
     {
-      text: "3 Hacks",
-      start: 256.78,
-      end: 261.7,
+      text: "2. AI Insights & Delivery",
+      start: 267.24,
+      end: 273.16,
+      mode: "BOTTOM_TITLE",
+      position: "bottom_center",
+      highlight_word: "Insights"
+    },
+    {
+      text: "3. Activate Automation",
+      start: 274.52,
+      end: 279.72,
+      mode: "BOTTOM_TITLE",
+      position: "bottom_center",
+      highlight_word: "Automation"
+    },
+    {
+      text: "AI With Human",
+      start: 281.88,
+      end: 285.88,
       mode: "CINEMATIC_CALLOUT",
-      position: "left"
+      position: "left",
+      highlight_word: "Human"
     },
     {
-      text: "AI Insights",
-      start: 272.72,
-      end: 277.7,
-      mode: "SIDE_PANEL",
-      position: "left"
-    },
-    {
-      text: "AI with Human",
-      start: 288.76,
-      end: 293.7,
-      mode: "CINEMATIC_CALLOUT",
-      position: "right"
-    },
-    {
-      text: "Partner with AI",
-      start: 304.72,
-      end: 309.7,
-      mode: "CINEMATIC_CALLOUT",
-      position: "left"
+      text: "Human + AI = Scale",
+      start: 291.44,
+      end: 299.36,
+      mode: "B_ROLL_VIDEO",
+      position: "left",
+      url: "generated-broll/human-ai-scale-01bc8a4da0a6.mp4",
+      highlight_word: "Human"
     },
     {
       text: "Human & Machine",
-      start: 312.76,
-      end: 317.7,
-      mode: "BOTTOM_TITLE",
-      position: "bottom_center"
+      start: 304.72,
+      end: 310.56,
+      mode: "CINEMATIC_CALLOUT",
+      position: "right",
+      highlight_word: "Machine"
     }
   ],
 };
@@ -202,7 +195,7 @@ export const RemotionRoot: React.FC = () => {
     <>
       <Composition
         id="VideoWithOverlays"
-        component={MyComposition}
+                component={MyComposition as unknown as React.ComponentType<Record<string, unknown>>}
         durationInFrames={Math.round(defaultProps.durationInSeconds * FPS)}
         fps={FPS}
         width={WIDTH}

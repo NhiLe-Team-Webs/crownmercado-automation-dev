@@ -18,6 +18,11 @@ from src.modules.video_processing.infrastructure.adapters.clip_reranker import C
 
 logger = structlog.get_logger()
 
+# B-roll quality thresholds (Phase 3 optimization)
+QUALITY_THRESHOLD_STRICT = 0.55  # For strict mode (production safety)
+QUALITY_THRESHOLD_BALANCED = 0.45  # For distribution-aware mode (default)
+QUALITY_THRESHOLD_DEFAULT = QUALITY_THRESHOLD_BALANCED
+
 
 def _build_ssl_context() -> ssl.SSLContext | None:
     try:
@@ -36,9 +41,16 @@ class BrollFetcher(IBrollFetcher):
         self.api_key = api_key or os.environ.get("PEXELS_API_KEY")
         if not self.api_key:
             logger.warning("PEXELS_API_KEY không được set. B-roll fetching sẽ bị skip.")
-        
+
         self.used_ids = set() # Tránh lặp clip trong một session
         self.ssl_context = _build_ssl_context()
+
+        # Log threshold configuration
+        logger.debug(
+            "B-roll fetcher initialized",
+            threshold=QUALITY_THRESHOLD_DEFAULT,
+            strict_mode=os.environ.get("BROLL_STRICT_MODE", "false").lower() == "true"
+        )
 
     async def fetch_best_match(self, overlay: TextOverlay) -> Optional[str]:
         if not self.api_key:
@@ -86,11 +98,11 @@ class BrollFetcher(IBrollFetcher):
                 continue
 
             score = self._calculate_score(clip, overlay)
-            if score > 0.55: # Ngưỡng tối thiểu để được coi là "premium" - Increased from 0.4 for higher quality
+            if score > QUALITY_THRESHOLD_DEFAULT: # Minimum quality threshold - configurable for distribution mode
                 scored_candidates.append((score, clip))
                 logger.debug(
-                    "Candidate scored above threshold", 
-                    clip_id=clip.get('id'), 
+                    "Candidate scored above threshold",
+                    clip_id=clip.get('id'),
                     score=round(score, 2)
                 )
             else:

@@ -22,6 +22,8 @@ export interface TextOverlay {
   url?: string;
   search_query?: string;
   highlight_word?: string;
+  focal_point?: { x: number; y: number };
+  animation_preset?: "default" | "cascade" | "pulse" | "emphasis" | "reveal" | "color-shift";
 }
 
 export interface VideoCompositionProps {

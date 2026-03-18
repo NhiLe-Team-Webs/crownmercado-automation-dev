@@ -29,6 +29,7 @@ export const TextOverlayLayer: React.FC<TextOverlayLayerProps> = ({
                     Math.round((overlay.end - overlay.start) * fps),
                     1
                 );
+                const sidePanelPosition = "left";
 
                 return (
                     <Sequence
@@ -41,7 +42,7 @@ export const TextOverlayLayer: React.FC<TextOverlayLayerProps> = ({
                             <SidePanelOverlay
                                 text={overlay.text}
                                 durationInFrames={durationInFrames}
-                                position={overlay.position as any}
+                                position={sidePanelPosition}
                             />
                         )}
                         {overlay.mode === "BOTTOM_TITLE" && (
@@ -57,6 +58,7 @@ export const TextOverlayLayer: React.FC<TextOverlayLayerProps> = ({
                                 text={overlay.text}
                                 highlightWord={overlay.highlight_word}
                                 focalPoint={overlay.focal_point}
+                                animationPreset={overlay.animation_preset}
                             />
                         )}
                         {overlay.mode === "CINEMATIC_CALLOUT" && (
