@@ -24,68 +24,71 @@ logger = structlog.get_logger()
 
 # ── Prompt ────────────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are a professional video editor and content strategist specializing in YouTube and social media video production.
-Your job is to analyze a video transcript and identify the most impactful keywords and phrases to display as visual text overlays — similar to what top educational and marketing YouTube channels use.
+SYSTEM_PROMPT = """You are a Senior AI Video Editor and Editorial Director specializing in high-end "talking head" content (think Ali Abdaal, GaryVee, or premium Masterclass style).
+Your mission is to elevate the video transcript by identifying moments where visual overlays or B-Roll footage drastically improve the viewer's understanding, emotional engagement, or the overall "premium" feel.
 
-You will receive:
-- full_text: the complete spoken transcript
-- words: an array of word-level segments with start/end timestamps (seconds)
+PHILOSOPHY: QUALITY OVER QUANTITY.
+- Only suggest B-roll if it truly enhances the content. Better to have NO B-roll than a generic "trash" clip.
+- The speaker is the anchor. Keep the focus on the speaker unless the visual adds significant value.
+- ENCOURAGED MOMENTS: Iconic brand stories (e.g. Coca-Cola, Heinz), clear visual comparisons (e.g. Old vs. New). 
+- SPECIAL BRAND TARGETING: If the transcript mentions "Coca-Cola", "Heinz", or "Create Real Magic", you MUST suggest a B_ROLL_VIDEO segment. This is top priority.
+YOUR TASK:
+Identify key moments in the video for:
+1. "SIDE_PANEL": Very short topic titles (1-4 words). Position: 'left'. Concise & minimal.
+2. "CINEMATIC_CALLOUT": 1-3 words max. Massive impact. Position: 'left' or 'right'.
+3. "BOTTOM_TITLE": 2-5 words. Horizontal summary at the bottom.
+4. "B_ROLL_VIDEO": Fullscreen stock video. Use for high-impact brand mentions, technical demos, or visual metaphors. Duration: 5-10s.
 
-Your task:
-Your task:
-Select 15–30 key moments in the video that deserve a visual callout or a B-Roll video insertion. These should be:
-- High-impact moments: surprising facts, strong claims, key takeaways, emotional peaks
-- Natural pauses or topic shifts where a visual anchor or B-Roll helps the viewer
-- NOT every important word — only ones that add value when shown visually
+B-ROLL SELECTION RULES (STRICT):
+- DISCOURAGED MOMENTS: Generic statements like "business is hard" or "we work together". Use text overlays for these instead.
+- ABSTRACT CONCEPTS: If the moment involves abstract concepts (e.g., "Emotional Storytelling", "Trust", "Innovation"), DO NOT use abstract search terms. Instead, brainstrom 4-6 LITERAL, CINEMATIC visual metaphors that represent the feeling.
+  * Example for "Emotional Storytelling": "Cinematic close up of person crying with joy", "Mother hugging child warm light", "Old man looking at old photo album", "Heartfelt reunion at airport".
+  * Example for "Future": "Human hand touching holographic interface", "Drone flying over futuristic city at night".
+- For a 4-6 minute video, target 3-5 high-quality B-rolls if relevant moments exist.
+- RELEVANCE: Visual must match the "visual_intent" and "spoken_context" perfectly.
+- INTENT: Define the "visual_intent" (e.g., 'red soda can close up', 'vintage glass bottle', 'digital art generation').
+- CAVEATS: Define "must_have" (e.g., 'natural lighting', 'diverse team') and "must_not_have" (e.g., 'cheesy smiles', 'white background stock').
+- QUERY STRATEGY: **CRITICAL** - ALL query_candidates MUST be cinematically specific. Each query must describe what a camera would literally capture:
+  * COMPONENT STRUCTURE: [Subject] + [Action] + [Environment] + [Visual Style]
+  * BAD ❌: "business success", "innovation", "teamwork"
+  * GOOD ✅: "confident entrepreneur presenting strategy in modern glass office with natural lighting cinematic professional"
+  * GOOD ✅: "engineer hand interacting with futuristic blue holographic interface dark room neon lighting sci-fi"
+  * GOOD ✅: "close up person crying tears of joy warm golden lighting emotional intimate"
+  * GOOD ✅: "diverse team collaborating at table modern office bright natural light professional documentary style"
+  * Provide 4-6 English query candidates ranging from literal (exact visual description) to action-oriented to thematic/symbolic.
+  * Every query MUST include concrete sensory details: lighting, subject action, location, mood.
 
-For each callout, choose ONE of four display modes:
-1. "SIDE_PANEL": Very short topic titles (1-4 words MAXIMUM). Position: 'left'. MUST be extremely concise.
-2. "CINEMATIC_CALLOUT": 1-3 words MAXIMUM. Massive impact. Position: 'left' or 'right'. Use for punchy numbers, shocking facts. MUST be extremely short.
-3. "BOTTOM_TITLE": 2-5 words MAXIMUM. Large horizontal text placed at the bottom. Position: 'bottom_center'. Summarize core arguments briefly.
-4. "B_ROLL_VIDEO": Fullscreen stock video covering the speaker. Use when the speaker mentions vivid imagery (e.g., "office", "working computer", "nature", "crowd", "technology", "abstract data"). Do NOT use text. You MUST provide a "search_query" in English (1-3 words) to search for stock video. Duration must be between 5.0 and 10.0 seconds.
+TEXT OVERLAY DENSITY TARGET:
+- Keep the pacing energetic with frequent visual callouts.
+- For a 4-6 minute video, target 14-24 total segments, mostly text overlays.
+- Use concise text overlays for key phrases, list items, contrasts, and punchlines.
 
-Distribution & Overlap rules (CRITICAL):
-- YOU MUST INCLUDE AT LEAST 5 TO 7 'B_ROLL_VIDEO' elements in your output.
-- B-Roll videos MUST be spread across the ENTIRE duration of the video (e.g., beginning, middle, end). Do NOT group them all in one section.
-- DISTRIBUTE EVENLY: Spread your chosen Text Overlays and B-Rolls evenly throughout the entire video to keep the viewer constantly engaged. Do not cluster them all together.
-- NO OVERLAP (MUTUALLY EXCLUSIVE): A B-Roll video and a Text Overlay must NEVER happen at the same time. If a segment has B_ROLL_VIDEO, it cannot have any text overlay.
-- MIX THEM UP: Alternate between Text Overlays and B-Roll videos to provide visual variety.
-
-Positioning rules:
-- For CINEMATIC_CALLOUT, you MUST ONLY use 'left' or 'right' position. Alternate between 'left' and 'right' for consecutive callouts to balance the visual space framing the speaker's face. DO NOT use bottom_center, bottom_left, or bottom_right.
-- For SIDE_PANEL, always use "left" position.
-- Never place two overlays within 5 seconds of each other.
-
-Video type detection — adapt your selection based on content:
-- Educational/Tutorial → favor concept names, step labels, statistics
-- Marketing/Sales → favor benefit statements, pain points, CTAs
-- Interview/Podcast → favor surprising quotes, opinion shifts, key claims
-- Motivational/Storytelling → favor emotional peaks, turning points, power words
-- Product demo → favor feature names, comparison words, outcome phrases
-
-Return ONLY a valid JSON array, no explanation, no markdown. Schema:
+JSON SCHEMA (Return ONLY a valid JSON array):
 [
   {
-    "text": "string (what to display. For B_ROLL_VIDEO, it MUST be a punchy 5-10 word statement. MUST USE SENTENCE CASE (e.g. 'This is a test'). Do not use all caps. For OTHER modes, you MUST summarize into EXTREMELY SHORT phrases (1-4 words max). Do not copy long sentences verbatim.)",
-    "start": number (seconds, align to the exact word that triggers display),
-    "end": number (seconds, typically start + MINIMUM 5.0 seconds. It MUST be at least 5 seconds long),
+    "text": "string (Display text. 1-4 words max for ALL modes.)",
+    "start": number,
+    "end": number,
     "mode": "SIDE_PANEL" | "CINEMATIC_CALLOUT" | "BOTTOM_TITLE" | "B_ROLL_VIDEO",
     "position": "left" | "right" | "bottom_center",
-    "search_query": "string (English keyword for searching Pexels, e.g. 'businessman typing'. ONLY set if mode is B_ROLL_VIDEO)",
-    "highlight_word": "string (A single impactful word contained within 'text' that should be highlighted. ONLY set if mode is B_ROLL_VIDEO)",
-    "reason": "one sentence why this moment deserves a callout or b-roll"
+    "reason": "string",
+    "spoken_context": "string",
+    "visual_intent": "string",
+    "must_have": ["string1", "string2"],
+    "must_not_have": ["string1"],
+    "query_candidates": ["query1", "query2"],
+    "anchor_subject": "person" | "object" | "scene" | "none",
+    "relevance_confidence": number (float 0.0 to 1.0),
+    "fallback_visual": "symbolic_clip" | "branded_text_scene" | "speaker_zoom" | "side_visual_card",
+    "highlight_word": "string (optional)"
   }
 ]
 
-Constraints:
-- Max 30 callouts per video
-- Min gap between end of one and start of next: 3.0 seconds
-- Duration of each callout MUST be at least 5.0 seconds. Ensure `end - start >= 5.0`
-- text max words: SIDE_PANEL <= 4 words, CINEMATIC_CALLOUT <= 3 words, BOTTOM_TITLE <= 5 words. Do NOT exceed these word limits.
-- Only use key words/phrases that actually appear near that timestamp in the transcript. Summarize heavily if needed.
-- For CINEMATIC_CALLOUT, STRICTLY alternate positions (left, right, left, right).
-- For B_ROLL_VIDEO, duration must be 5-10 seconds. Provide a highly descriptive English 'search_query'.
-- Do NOT output anything outside the JSON array."""
+CONSTRAINTS:
+- No Overlaps: B-roll and Text Overlays MUST be mutually exclusive.
+- Spacing: Min 1.2s gap between any two segments.
+- B-roll Duration: 5-10 seconds.
+- Formatting: Return ONLY the JSON array. No preamble."""
 
 USER_PROMPT_TEMPLATE = """Video transcript:
 \"\"\"
@@ -100,7 +103,7 @@ Analyze this transcript and return the text overlay callouts as JSON."""
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 MAX_RETRIES = 2
-MIN_GAP_SECONDS = 3.0
+MIN_GAP_SECONDS = 1.2
 GEMINI_MODEL = "gemini-2.5-flash"
 
 
@@ -110,7 +113,7 @@ class GeminiKeywordExtractor(IKeywordExtractorPort):
     """
     Gọi Gemini Flash để extract keyword từ transcript.
     Validate JSON output với Pydantic, retry nếu parse lỗi.
-    Enforce min-gap 3s giữa các overlay.
+    Enforce min-gap 1.2s giữa các overlay.
     """
 
     def __init__(self, api_keys: list[str] | None = None) -> None:
@@ -147,8 +150,13 @@ class GeminiKeywordExtractor(IKeywordExtractorPort):
                 raw = await asyncio.to_thread(
                     self._call_gemini, user_prompt
                 )
+                logger.info("Raw Gemini response received", length=len(raw))
+                # Log a snippet of the raw response for debugging
+                logger.debug("Raw response snippet", raw=raw[:500])
+                
                 overlays = self._parse_and_validate(raw, transcript)
                 overlays = self._enforce_min_gap(overlays)
+                overlays = self._balance_overlay_types(overlays)
                 logger.info(
                     "Keyword extraction successful",
                     count=len(overlays),
@@ -216,8 +224,21 @@ class GeminiKeywordExtractor(IKeywordExtractorPort):
         overlays: list[TextOverlay] = []
         for item in data:
             try:
+                def safe_float(val: Any, default: float = 0.0) -> float:
+                    if val is None: return default
+                    try:
+                        # Extract first number from string if needed (e.g. "0.8 (high)" -> 0.8)
+                        if isinstance(val, str):
+                            import re
+                            match = re.search(r"[-+]?\d*\.\d+|\d+", val)
+                            if match:
+                                return float(match.group())
+                        return float(val)
+                    except:
+                        return default
+
                 # Snap to word algorithm
-                llm_start = float(item["start"])
+                llm_start = safe_float(item.get("start"), 0.0)
                 # Tim word gan start nhat (sai so < 2s)
                 snapped_start = llm_start
                 min_diff = 2.0
@@ -228,24 +249,38 @@ class GeminiKeywordExtractor(IKeywordExtractorPort):
                         snapped_start = w.start
                 
                 start_time = snapped_start
-                end_time = float(item["end"])
+                end_time = safe_float(item.get("end"), start_time + 5.0)
                 
                 # Dam bao thoi gian B-Roll theo luat
                 mode_str = item.get("mode", "CINEMATIC_CALLOUT")
                 if mode_str == "B_ROLL_VIDEO":
                     end_time = max(start_time + 5.0, min(start_time + 10.0, end_time))
+                else:
+                    # Keep short text callouts readable: minimum visible time is 4 seconds.
+                    end_time = max(end_time, start_time + 4.0)
+
+                position_raw = item.get("position", "bottom_left")
+                if mode_str == "B_ROLL_VIDEO" and position_raw not in {"left", "right", "bottom_center"}:
+                    # Gemini sometimes emits "none" for B-roll. Default to left so the item is still usable.
+                    position_raw = "left"
 
                 overlay = TextOverlay(
-                    text=item.get("text", ""),
+                    text=str(item.get("text", "")),
                     start=start_time,
                     end=end_time,
                     mode=TextOverlayMode(mode_str),
-                    position=TextOverlayPosition(
-                        item.get("position", "bottom_left")
-                    ),
+                    position=TextOverlayPosition(position_raw),
                     reason=item.get("reason"),
-                    search_query=item.get("search_query"),
+                    search_query=item.get("search_query"), 
                     highlight_word=item.get("highlight_word"),
+                    visual_intent=item.get("visual_intent"),
+                    spoken_context=item.get("spoken_context"),
+                    must_have=item.get("must_have") if isinstance(item.get("must_have"), list) else [],
+                    must_not_have=item.get("must_not_have") if isinstance(item.get("must_not_have"), list) else [],
+                    query_candidates=item.get("query_candidates") if isinstance(item.get("query_candidates"), list) else [],
+                    anchor_subject=item.get("anchor_subject"),
+                    relevance_confidence=safe_float(item.get("relevance_confidence"), 1.0),
+                    fallback_visual=item.get("fallback_visual"),
                 )
                 overlays.append(overlay)
             except Exception as exc:
@@ -255,7 +290,7 @@ class GeminiKeywordExtractor(IKeywordExtractorPort):
 
     def _enforce_min_gap(self, overlays: list[TextOverlay]) -> list[TextOverlay]:
         """
-        Loại bỏ overlay vi phạm min-gap 3s.
+        Loại bỏ overlay vi phạm min-gap 1.2s.
         Giữ overlay đầu tiên của mỗi nhóm overlap.
         """
         if not overlays:
@@ -274,5 +309,56 @@ class GeminiKeywordExtractor(IKeywordExtractorPort):
                     text=overlay.text,
                     start=overlay.start,
                 )
+
+        return result
+
+    def _balance_overlay_types(self, overlays: list[TextOverlay]) -> list[TextOverlay]:
+        """
+        Cân bằng distribution của SIDE_PANEL, CINEMATIC_CALLOUT, BOTTOM_TITLE.
+        Ngăn chặn 3+ SIDE_PANEL liên tiếp bằng cách chuyển đổi sang các loại khác.
+        """
+        if len(overlays) < 3:
+            return overlays
+
+        result = []
+        consecutive_side_panel = 0
+
+        for idx, overlay in enumerate(overlays):
+            if overlay.mode == TextOverlayMode.SIDE_PANEL:
+                consecutive_side_panel += 1
+                
+                # Nếu đã có 3 SIDE_PANEL liên tiếp, chuyển cái này thành CINEMATIC_CALLOUT
+                if consecutive_side_panel >= 3:
+                    logger.debug(
+                        "Converting SIDE_PANEL to CINEMATIC_CALLOUT to balance overlay types",
+                        text=overlay.text,
+                        position=overlay.position,
+                    )
+                    # Tạo overlay mới với mode khác
+                    converted = TextOverlay(
+                        text=overlay.text,
+                        start=overlay.start,
+                        end=overlay.end,
+                        mode=TextOverlayMode.CINEMATIC_CALLOUT,
+                        position=TextOverlayPosition.LEFT if overlay.position == TextOverlayPosition.RIGHT else TextOverlayPosition.RIGHT,
+                        reason=overlay.reason,
+                        search_query=overlay.search_query,
+                        highlight_word=overlay.highlight_word,
+                        visual_intent=overlay.visual_intent,
+                        spoken_context=overlay.spoken_context,
+                        must_have=overlay.must_have,
+                        must_not_have=overlay.must_not_have,
+                        query_candidates=overlay.query_candidates,
+                        anchor_subject=overlay.anchor_subject,
+                        relevance_confidence=overlay.relevance_confidence,
+                        fallback_visual=overlay.fallback_visual,
+                    )
+                    result.append(converted)
+                    consecutive_side_panel = 0  # Reset counter
+                else:
+                    result.append(overlay)
+            else:
+                result.append(overlay)
+                consecutive_side_panel = 0  # Reset counter khi gặp loại khác
 
         return result
