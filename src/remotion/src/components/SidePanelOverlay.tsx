@@ -1,10 +1,10 @@
 import React from "react";
 import {
     useCurrentFrame,
-    useVideoConfig,
     interpolate,
-    spring,
+    Easing
 } from "remotion";
+import { preventOrphanLines } from "../utils/smart-text-wrapper";
 
 interface SidePanelOverlayProps {
     text: string;
@@ -25,66 +25,55 @@ export const SidePanelOverlay: React.FC<SidePanelOverlayProps> = ({
     position = "left",
 }) => {
     const frame = useCurrentFrame();
-    const { fps } = useVideoConfig();
+    const exitFrame = durationInFrames - 10;
 
-    const exitFrame = durationInFrames - 15;
+    // ── Enter: Trượt chậm hơn để mượt (20 frames) ───────────────────────────
+    const enterProgress = interpolate(
+        frame,
+        [0, 20],
+        [0, 1],
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
+    );
 
-    // ── Enter: slide-in từ trái ─────────────────────────────────────────────
-    const enterProgress = spring({
-        frame: frame,
-        fps,
-        config: { damping: 18, stiffness: 120, mass: 1 },
-        durationInFrames: 30,
-    });
-
-
-    // ── Exit: fade out ───────────────────────────────────────────────────────
+    // ── Exit: Trượt ra hoặc fade (đồng bộ 10 frames) ─────────────────────────
     const exitOpacity = interpolate(
         frame,
-        [exitFrame, exitFrame + 12],
+        [exitFrame, durationInFrames - 1],
         [1, 0],
-        { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
     );
 
-    const translateX = interpolate(enterProgress, [0, 1], [position === "left" ? -40 : 40, 0]);
-    const panelOpacity = Math.min(
-        interpolate(enterProgress, [0, 1], [0, 1]),
-        exitOpacity
-    );
+    // Slide in from off-screen (-100%) to neutral (0%)
+    const translateX = interpolate(enterProgress, [0, 1], [position === "left" ? -100 : 100, 0]);
+    
+    // Panel appearance: Slide is primary, but we use exitOpacity for clean departure
+    const panelOpacity = exitOpacity;
 
-    // Text fade-up (delayed slightly)
-    const textProgress = spring({
-        frame: Math.max(0, frame - 4),
-        fps,
-        config: { damping: 20, stiffness: 130, mass: 0.9 },
-        durationInFrames: 25,
-    });
+    // Text fade-up (slightly delayed, follow the slower panel)
+    const textProgress = interpolate(
+        frame,
+        [8, 22],
+        [0, 1],
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
+    );
 
     const textTranslateY = interpolate(textProgress, [0, 1], [10, 0]);
-    const textOpacity = Math.min(
-        interpolate(textProgress, [0, 1], [0, 1]),
-        exitOpacity
-    );
+    const textOpacity = Math.min(textProgress, exitOpacity);
     const panelText = text.toUpperCase();
+    const processedPanelText = preventOrphanLines(panelText);
     const totalChars = panelText.replace(/\s+/g, "").length;
     const longestToken = panelText
         .split(/\s+/)
         .reduce((max, token) => Math.max(max, token.length), 0);
     const adaptiveFontSize = longestToken > 15
-        ? 50
+        ? 42
         : longestToken > 12
-            ? 56
+            ? 48
             : totalChars > 20
-                ? 60
-                : 68;
+                ? 54
+                : 60;
 
-    const underlineSpring = spring({
-        frame: Math.max(0, frame - 8),
-        fps,
-        config: { damping: 16, stiffness: 110, mass: 1 },
-        durationInFrames: 20,
-    });
-    const underlineScaleX = interpolate(underlineSpring, [0, 1], [0, 1]);
+    const underlineScaleX = interpolate(textProgress, [0, 1], [0, 1]);
 
     return (
         <div
@@ -92,15 +81,15 @@ export const SidePanelOverlay: React.FC<SidePanelOverlayProps> = ({
                 position: "absolute",
                 top: 0,
                 [position]: 0,
-                width: "38%",
+                width: "33%",
                 height: "100%",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 opacity: panelOpacity,
-                transform: `translateX(${translateX}px)`,
-                background: "rgba(255, 255, 255, 0.96)",
-                backdropFilter: "blur(2px)",
+                transform: `translateX(${translateX}%)`,
+                background: "rgba(255, 255, 255, 1.0)",
+                backdropFilter: "blur(8px)",
                 boxShadow: position === "left"
                     ? "4px 0 24px rgba(0,0,0,0.08)"
                     : "-4px 0 24px rgba(0,0,0,0.08)",
@@ -132,13 +121,13 @@ export const SidePanelOverlay: React.FC<SidePanelOverlayProps> = ({
                         textAlign: "left",
                         margin: 0,
                         letterSpacing: "-0.03em",
-                        whiteSpace: "normal",
+                        whiteSpace: "pre-line",
                         wordBreak: "keep-all",
-                        overflowWrap: "normal",
-                        hyphens: "none",
+                        overflowWrap: "break-word",
+                        overflow: "hidden",
                     }}
                 >
-                    {panelText}
+                    {processedPanelText}
                 </p>
 
                 <div

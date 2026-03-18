@@ -1,5 +1,6 @@
 import React from "react";
-import { useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
+import { useCurrentFrame, interpolate, Easing } from "remotion";
+import { preventOrphanLines } from "../utils/smart-text-wrapper";
 
 interface BottomTitleProps {
     text: string;
@@ -17,35 +18,32 @@ export const BottomTitle: React.FC<BottomTitleProps> = ({
     durationInFrames,
 }) => {
     const frame = useCurrentFrame();
-    const { fps } = useVideoConfig();
 
-    const exitFrame = durationInFrames - 15;
+    const exitFrame = durationInFrames - 10;
 
-    // ── Enter: Trượt nhẹ từ dưới lên + fade in ──────────────────────────────
-    const enterSpring = spring({
-        frame: frame,
-        fps,
-        config: { damping: 14, stiffness: 100, mass: 1 },
-        durationInFrames: 25,
-    });
+    // ── Enter: Trượt nhẹ từ dưới lên + fade in (đồng bộ 10 frames với zoom) ──
+    const enterProgress = interpolate(
+        frame,
+        [0, 10],
+        [0, 1],
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
+    );
 
-    const translateY = interpolate(enterSpring, [0, 1], [40, 0]);
+    const translateY = interpolate(enterProgress, [0, 1], [40, 0]);
 
     // ── Exit: fade out ────────────────────────────────────────────────────────
     const exitOpacity = interpolate(
         frame,
-        [exitFrame, exitFrame + 12],
+        [exitFrame, durationInFrames - 1],
         [1, 0],
-        { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
     );
 
-    const enterOpacity = interpolate(enterSpring, [0, 0.5], [0, 1], {
-        extrapolateRight: "clamp",
-    });
-    const opacity = Math.min(enterOpacity, exitOpacity);
+    const opacity = Math.min(enterProgress, exitOpacity);
     const titleText = text.toUpperCase();
     const titleLength = titleText.length;
     const adaptiveFontSize = titleLength > 30 ? 58 : titleLength > 22 ? 66 : 80;
+    const processedText = preventOrphanLines(titleText);
 
     return (
         <div
@@ -70,15 +68,16 @@ export const BottomTitle: React.FC<BottomTitleProps> = ({
                     color: "#FFFFFF",
                     textTransform: "uppercase",
                     letterSpacing: "-0.01em",
-                    whiteSpace: "nowrap",
+                    whiteSpace: "pre-line",
                     wordBreak: "keep-all",
+                    overflowWrap: "break-word",
                     textAlign: "center",
                     maxWidth: "92vw",
                     WebkitTextStroke: "2px rgba(0,0,0,0.6)",
                     textShadow: "6px 6px 0px rgba(0,0,0,0.8), 0px 8px 16px rgba(0,0,0,0.6)",
                 }}
             >
-                {titleText}
+                {processedText}
             </span>
         </div>
     );

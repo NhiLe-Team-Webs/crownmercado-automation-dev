@@ -1,8 +1,9 @@
 import React from "react";
-import { AbsoluteFill, OffthreadVideo, interpolate, useCurrentFrame, spring, useVideoConfig } from "remotion";
+import { AbsoluteFill, OffthreadVideo, interpolate, useCurrentFrame, spring, useVideoConfig, staticFile } from "remotion";
+import { smartWrapText } from "../utils/smart-text-wrapper";
 
 export const BRollOverlay: React.FC<{
-    url: string;
+    url?: string;
     durationInFrames: number;
     text?: string;
     highlightWord?: string;
@@ -10,6 +11,18 @@ export const BRollOverlay: React.FC<{
 }> = ({ url, durationInFrames, text, highlightWord, focalPoint }) => {
     const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
+    const normalizedSrc = !url
+        ? ""
+        : (url.startsWith("http://") || url.startsWith("https://")
+            ? url
+            : staticFile(url.replace(/^\/+/, "")));
+    const effectiveHighlightWord = highlightWord || (() => {
+        const candidates = (text || "").split(/\s+/).filter(Boolean);
+        if (!candidates.length) {
+            return "";
+        }
+        return candidates.reduce((a, b) => (b.length > a.length ? b : a));
+    })();
 
     // No transitions: Appear instantly as requested
     const opacity = 1;
@@ -17,8 +30,21 @@ export const BRollOverlay: React.FC<{
     const words = text ? text.split(" ") : [];
     const WORD_DELAY = 4; // frames between each word
 
+    // Smart wrap to prevent orphaned words
+    const wrappedLines = text ? smartWrapText(text) : [];
+    const smartWords: string[] = [];
+    wrappedLines.forEach((line, lineIdx) => {
+        const lineWords = line.split(" ");
+        lineWords.forEach((w, wordIdx) => {
+            smartWords.push(w);
+        });
+    });
+
+    // Use smart words if available, otherwise fallback to original words
+    const displayWords = smartWords.length > 0 ? smartWords : words;
+
     // total time for words to appear securely
-    const wordsFinishFrame = words.length * WORD_DELAY + 10;
+    const wordsFinishFrame = displayWords.length * WORD_DELAY + 10;
 
     const zoomScale = interpolate(
         frame,
@@ -33,20 +59,24 @@ export const BRollOverlay: React.FC<{
 
     return (
         <AbsoluteFill style={{ opacity }}>
-            <div style={{ width: "100%", height: "100%", overflow: "hidden" }}>
-                <OffthreadVideo
-                    src={url}
-                    muted
-                    style={{ 
-                        width: "100%", 
-                        height: "100%", 
-                        objectFit: "cover",
-                        objectPosition: `${focalX}% ${focalY}%`,
-                        transform: `scale(${zoomScale})`,
-                        transformOrigin: `${focalX}% ${focalY}%`,
-                    }}
-                />
-            </div>
+            {normalizedSrc ? (
+                <div style={{ width: "100%", height: "100%", overflow: "hidden" }}>
+                    <OffthreadVideo
+                        src={normalizedSrc}
+                        muted
+                        style={{ 
+                            width: "100%", 
+                            height: "100%", 
+                            objectFit: "cover",
+                            objectPosition: `${focalX}% ${focalY}%`,
+                            transform: `scale(${zoomScale})`,
+                            transformOrigin: `${focalX}% ${focalY}%`,
+                        }}
+                    />
+                </div>
+            ) : (
+                <AbsoluteFill style={{ background: "radial-gradient(circle at 20% 20%, #2a2a2a 0%, #111 55%, #000 100%)" }} />
+            )}
 
 
 
@@ -76,8 +106,9 @@ export const BRollOverlay: React.FC<{
                         lineHeight: 1.2,
                         color: "white",
                         textShadow: "0px 4px 12px rgba(0,0,0,0.5)",
+                        wordBreak: "keep-all",
                     }}>
-                        {words.map((w, i) => {
+                        {displayWords.map((w, i) => {
                             const delay = i * WORD_DELAY;
 
                             const wordSpring = spring({
@@ -96,8 +127,8 @@ export const BRollOverlay: React.FC<{
                             );
 
                             const normalizedWord = w.toLowerCase().replace(/[^a-z0-9]/g, '');
-                            const normalizedHighlight = highlightWord ? highlightWord.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
-                            const isHighlight = highlightWord && normalizedWord.length > 2 && normalizedHighlight.length > 2 &&
+                            const normalizedHighlight = effectiveHighlightWord ? effectiveHighlightWord.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+                            const isHighlight = !!effectiveHighlightWord && normalizedWord.length > 2 && normalizedHighlight.length > 2 &&
                                 (normalizedWord.includes(normalizedHighlight) || normalizedHighlight.includes(normalizedWord));
 
                             // Alternate between Cyan and Red depending on text length & word index

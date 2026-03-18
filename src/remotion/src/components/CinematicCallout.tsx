@@ -1,6 +1,7 @@
 import React from "react";
-import { useCurrentFrame, useVideoConfig, interpolate, spring } from "remotion";
+import { useCurrentFrame, interpolate, Easing } from "remotion";
 import type { TextOverlayPosition } from "../types";
+import { preventOrphanLines } from "../utils/smart-text-wrapper";
 
 interface CinematicCalloutProps {
     text: string;
@@ -21,33 +22,30 @@ export const CinematicCallout: React.FC<CinematicCalloutProps> = ({
     position,
 }) => {
     const frame = useCurrentFrame();
-    const { fps } = useVideoConfig();
 
-    const exitFrame = durationInFrames - 12;
+    const exitFrame = durationInFrames - 10;
 
-    // ── Enter: scale spring + fade ───────────────────────────────────────────
-    const enterSpring = spring({
-        frame: frame,
-        fps,
-        config: { damping: 18, stiffness: 115, mass: 1 },
-        durationInFrames: 22,
-    });
-
+    // ── Enter: smooth scale + fade (đồng bộ 10 frames với zoom) ──────────────
+    const enterProgress = interpolate(
+        frame,
+        [0, 10],
+        [0, 1],
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
+    );
 
     // ── Exit: fade out ────────────────────────────────────────────────────────
     const exitOpacity = interpolate(
         frame,
-        [exitFrame, exitFrame + 10],
+        [exitFrame, durationInFrames - 1],
         [1, 0],
-        { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+        { extrapolateLeft: "clamp", extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) }
     );
 
+    const scale = interpolate(enterProgress, [0, 1], [0.92, 1.0]);
+    const opacity = Math.min(enterProgress, exitOpacity);
 
-    const scale = interpolate(enterSpring, [0, 1], [0.88, 1.0]);
-    const enterOpacity = interpolate(enterSpring, [0, 0.3], [0, 1], {
-        extrapolateRight: "clamp",
-    });
-    const opacity = Math.min(enterOpacity, exitOpacity);
+    // Prevent orphaned text
+    const processedText = preventOrphanLines(text);
 
     // ── Position mapping ──────────────────────────────────────────────────────
     const positionStyle = POSITION_MAP[position] ?? POSITION_MAP["bottom_left"];
@@ -59,22 +57,41 @@ export const CinematicCallout: React.FC<CinematicCalloutProps> = ({
             style={{
                 position: "absolute",
                 ...positionStyle,
-                padding: "0 48px",
+                padding: "0 80px",
                 opacity,
                 transform,
-                transformOrigin: TRANSFORM_ORIGIN[position] ?? "bottom left",
+                transformOrigin: TRANSFORM_ORIGIN[position] ?? "center center",
                 pointerEvents: "none",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: position === "left" || position === "bottom_left" 
+                    ? "flex-start" 
+                    : position === "right" || position === "bottom_right" 
+                        ? "flex-end" 
+                        : "center",
+                width: "100%",
+                maxWidth: "100%",
+                boxSizing: "border-box",
             }}
         >
-            <span
+            <div
                 style={{
                     fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
                     fontWeight: 900,
                     fontSize: 72,
-                    lineHeight: 1.05,
+                    lineHeight: 1.0,
                     color: "#FFFFFF",
                     textTransform: "uppercase",
                     letterSpacing: "-0.01em",
+                    textAlign: position === "left" || position === "bottom_left"
+                        ? "left"
+                        : position === "right" || position === "bottom_right"
+                            ? "right"
+                            : "center",
+                    whiteSpace: "pre-line",
+                    wordBreak: "keep-all",
+                    overflowWrap: "break-word",
+                    maxWidth: 700,
                     textShadow: [
                         "3px 3px 0px rgba(0,0,0,0.9)",
                         "-1px -1px 0px rgba(0,0,0,0.7)",
@@ -82,12 +99,11 @@ export const CinematicCallout: React.FC<CinematicCalloutProps> = ({
                         "-2px 2px 0px rgba(0,0,0,0.7)",
                         "0px 4px 12px rgba(0,0,0,0.5)",
                     ].join(", "),
-                    display: "block",
-                    maxWidth: 500,
+                    display: "inline-block",
                 }}
             >
-                {text}
-            </span>
+                {processedText}
+            </div>
         </div>
     );
 };
@@ -103,16 +119,16 @@ type PositionCSS = {
 };
 
 const POSITION_MAP: Record<TextOverlayPosition, PositionCSS> = {
-    left: { top: "50%", left: 80, transform: "translateY(-50%)" } as any,
-    right: { top: "50%", right: 80, transform: "translateY(-50%)" } as any,
-    bottom_left: { bottom: 60, left: 80 },
-    bottom_right: { bottom: 60, right: 80 },
-    bottom_center: { bottom: 60, left: "50%", transform: "translateX(-50%)" } as any,
+    left: { top: "50%", left: 0, transform: "translateY(-50%)" },
+    right: { top: "50%", right: 0, transform: "translateY(-50%)" },
+    bottom_left: { bottom: 60, left: 0 },
+    bottom_right: { bottom: 60, right: 0 },
+    bottom_center: { bottom: 60, left: 0, right: 0 },
 };
 
 const TRANSFORM_ORIGIN: Record<TextOverlayPosition, string> = {
-    left: "left center",
-    right: "right center",
+    left: "center center",
+    right: "center center",
     bottom_left: "bottom left",
     bottom_right: "bottom right",
     bottom_center: "bottom center",
