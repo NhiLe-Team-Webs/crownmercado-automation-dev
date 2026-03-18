@@ -179,3 +179,4 @@ src/automation/provision-lambda/*.zip
 src/automation/provision-lambda/dist/
 !.opencode/plans/
 
+node_modules

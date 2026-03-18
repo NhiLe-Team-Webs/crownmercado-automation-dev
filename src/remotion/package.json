@@ -7,13 +7,14 @@
   "private": true,
   "dependencies": {
     "@remotion/cli": "4.0.417",
+    "@remotion/tailwind-v4": "4.0.417",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.417",
-    "@remotion/tailwind-v4": "4.0.417",
     "tailwindcss": "4.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@remotion/eslint-config-flat": "4.0.417",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
