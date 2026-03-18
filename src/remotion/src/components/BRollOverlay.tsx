@@ -6,19 +6,13 @@ export const BRollOverlay: React.FC<{
     durationInFrames: number;
     text?: string;
     highlightWord?: string;
-}> = ({ url, durationInFrames, text, highlightWord }) => {
+    focalPoint?: { x: number; y: number };
+}> = ({ url, durationInFrames, text, highlightWord, focalPoint }) => {
     const frame = useCurrentFrame();
     const { fps } = useVideoConfig();
 
-    // Fade in 15 frames, Fade out 15 frames
-    const FADE_DUR = 15;
-
-    const opacity = interpolate(
-        frame,
-        [0, FADE_DUR, durationInFrames - FADE_DUR, durationInFrames],
-        [0, 1, 1, 0],
-        { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
-    );
+    // No transitions: Appear instantly as requested
+    const opacity = 1;
 
     const words = text ? text.split(" ") : [];
     const WORD_DELAY = 4; // frames between each word
@@ -26,12 +20,35 @@ export const BRollOverlay: React.FC<{
     // total time for words to appear securely
     const wordsFinishFrame = words.length * WORD_DELAY + 10;
 
+    const zoomScale = interpolate(
+        frame,
+        [0, durationInFrames],
+        [1.08, 1.15], // Reduced zoom intensity to avoid "jumpy" feel at the end
+        { extrapolateRight: "clamp" }
+    );
+
+    // Dynamic Subject Correction (Semantic Auto-Framing from Gemini Vision)
+    const focalX = focalPoint?.x ?? 50;
+    const focalY = focalPoint?.y ?? 50;
+
     return (
-        <AbsoluteFill style={{ opacity, backgroundColor: "black" }}>
-            <OffthreadVideo
-                src={url}
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
+        <AbsoluteFill style={{ opacity }}>
+            <div style={{ width: "100%", height: "100%", overflow: "hidden" }}>
+                <OffthreadVideo
+                    src={url}
+                    muted
+                    style={{ 
+                        width: "100%", 
+                        height: "100%", 
+                        objectFit: "cover",
+                        objectPosition: `${focalX}% ${focalY}%`,
+                        transform: `scale(${zoomScale})`,
+                        transformOrigin: `${focalX}% ${focalY}%`,
+                    }}
+                />
+            </div>
+
+
 
             {/* Overlay Gradient for text readability */}
             {text && (
@@ -78,7 +95,10 @@ export const BRollOverlay: React.FC<{
                                 { extrapolateRight: "clamp" }
                             );
 
-                            const isHighlight = highlightWord && w.toLowerCase().includes(highlightWord.toLowerCase());
+                            const normalizedWord = w.toLowerCase().replace(/[^a-z0-9]/g, '');
+                            const normalizedHighlight = highlightWord ? highlightWord.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+                            const isHighlight = highlightWord && normalizedWord.length > 2 && normalizedHighlight.length > 2 &&
+                                (normalizedWord.includes(normalizedHighlight) || normalizedHighlight.includes(normalizedWord));
 
                             // Alternate between Cyan and Red depending on text length & word index
                             const useRed = (i + (text?.length || 0)) % 2 === 0;

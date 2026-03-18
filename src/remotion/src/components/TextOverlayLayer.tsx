@@ -41,6 +41,7 @@ export const TextOverlayLayer: React.FC<TextOverlayLayerProps> = ({
                             <SidePanelOverlay
                                 text={overlay.text}
                                 durationInFrames={durationInFrames}
+                                position={overlay.position as any}
                             />
                         )}
                         {overlay.mode === "BOTTOM_TITLE" && (
@@ -49,19 +50,46 @@ export const TextOverlayLayer: React.FC<TextOverlayLayerProps> = ({
                                 durationInFrames={durationInFrames}
                             />
                         )}
-                        {overlay.mode === "B_ROLL_VIDEO" && overlay.url && (
+                        {overlay.mode === "B_ROLL_VIDEO" && (
                             <BRollOverlay
-                                url={overlay.url}
+                                url={overlay.url || ""}
                                 durationInFrames={durationInFrames}
                                 text={overlay.text}
                                 highlightWord={overlay.highlight_word}
+                                focalPoint={overlay.focal_point}
                             />
                         )}
                         {overlay.mode === "CINEMATIC_CALLOUT" && (
                             <CinematicCallout
                                 text={overlay.text}
                                 durationInFrames={durationInFrames}
-                                position={overlay.position}
+                                position={(() => {
+                                    const isCta = /subscribe|follow|like|share|comment|đăng ký/i.test(
+                                        overlay.text
+                                    );
+                                    if (isCta) {
+                                        return "bottom_center";
+                                    }
+
+                                    const upcomingHighlights = overlays.slice(index + 1).filter(
+                                        (next) => next.mode !== "B_ROLL_VIDEO"
+                                    );
+                                    const hasFutureRightCallout = upcomingHighlights.some(
+                                        (next) =>
+                                            next.mode === "CINEMATIC_CALLOUT" && next.position === "right"
+                                    );
+                                    const isLastHighlight = upcomingHighlights.length === 0;
+
+                                    if (
+                                        isLastHighlight &&
+                                        overlay.position !== "right" &&
+                                        !hasFutureRightCallout
+                                    ) {
+                                        return "bottom_center";
+                                    }
+
+                                    return overlay.position;
+                                })()}
                             />
                         )}
                     </Sequence>

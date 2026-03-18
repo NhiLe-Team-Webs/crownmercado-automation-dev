@@ -43,6 +43,9 @@ export const BottomTitle: React.FC<BottomTitleProps> = ({
         extrapolateRight: "clamp",
     });
     const opacity = Math.min(enterOpacity, exitOpacity);
+    const titleText = text.toUpperCase();
+    const titleLength = titleText.length;
+    const adaptiveFontSize = titleLength > 30 ? 58 : titleLength > 22 ? 66 : 80;
 
     return (
         <div
@@ -62,20 +65,20 @@ export const BottomTitle: React.FC<BottomTitleProps> = ({
                 style={{
                     fontFamily: "'Inter', 'Helvetica Neue', Arial, sans-serif",
                     fontWeight: 900,
-                    fontSize: 80, // Điều chỉnh xuống từ 100px
+                    fontSize: adaptiveFontSize,
                     lineHeight: 1.1,
                     color: "#FFFFFF",
                     textTransform: "uppercase",
                     letterSpacing: "-0.01em",
-                    whiteSpace: "pre-wrap",
+                    whiteSpace: "nowrap",
                     wordBreak: "keep-all",
                     textAlign: "center",
-                    maxWidth: "85vw", // Gần full màn hình ngang
+                    maxWidth: "92vw",
                     WebkitTextStroke: "2px rgba(0,0,0,0.6)",
                     textShadow: "6px 6px 0px rgba(0,0,0,0.8), 0px 8px 16px rgba(0,0,0,0.6)",
                 }}
             >
-                {text}
+                {titleText}
             </span>
         </div>
     );
