@@ -11,7 +11,7 @@
  * - Ensures no single character breakpoints
  * - Returns text with optimal break points
  */
-export const smartWrapText = (text: string, maxLinesAfter: number = 1): string[] => {
+export const smartWrapText = (text: string): string[] => {
     if (!text || text.trim().length === 0) return [];
 
     const words = text.split(/\s+/).filter(Boolean);

@@ -35,9 +35,9 @@ export const BRollOverlay: React.FC<{
     // Smart wrap to prevent orphaned words
     const wrappedLines = text ? smartWrapText(text) : [];
     const smartWords: string[] = [];
-    wrappedLines.forEach((line, lineIdx) => {
+    wrappedLines.forEach((line) => {
         const lineWords = line.split(" ");
-        lineWords.forEach((w, wordIdx) => {
+        lineWords.forEach((w) => {
             smartWords.push(w);
         });
     });
